@@ -1,15 +1,13 @@
-# MyStudy Support
+# MyStudy Support v2 Prototype
 
-A simple landing page for the MyStudy Support MVP.
+A lightweight commercial prototype for family accounts, multiple child profiles, sibling progress and study buddies.
 
-Upload these files to the repository root:
+## Included
+- Parent signup-style demo
+- Add multiple children
+- Family code / student join demo
+- Family progress visible to siblings
+- Study buddy streak preview
+- Privacy logic explanation
 
-- index.html
-- style.css
-- README.md
-
-Cloudflare Pages settings:
-
-- Framework preset: None
-- Build command: leave blank
-- Build output directory: /
+This is a front-end prototype using localStorage. It is for product validation, not a production authentication system.
