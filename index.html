@@ -4,210 +4,163 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MyStudy Support</title>
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7.0" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand" role="button" data-view="home">
-      <div class="logo">M</div>
+    <div class="brand" onclick="go('home')">
+      <div class="brand-mark">M</div>
       <div>
-        <h1>MyStudy Support</h1>
-        <p>Daily study dashboard for students and parents</p>
+        <div class="brand-name">MyStudy Support</div>
+        <div class="brand-tag">Daily study dashboard for students and parents</div>
       </div>
     </div>
-    <nav>
-      <button data-view="home">Home</button>
-      <button data-view="demo">View Demo</button>
-      <button class="primary" data-view="signup">Sign up</button>
-      <button class="dark" data-view="login">Login</button>
+    <nav class="nav" id="mainNav">
+      <button data-view="home" onclick="go('home')">Home</button>
+      <button data-view="parent" onclick="go('parent')">Parent</button>
+      <button data-view="student" onclick="go('student')">Student</button>
+      <button data-view="demo" onclick="go('demo')">Demo</button>
+      <button data-view="login" onclick="go('login')" class="primary-nav">Login</button>
     </nav>
   </header>
 
   <main>
     <section id="home" class="view active">
-      <div class="hero-card">
-        <p class="eyebrow">FOR FAMILIES</p>
-        <h2>A simple dashboard for homework, deadlines, streaks and parent visibility.</h2>
-        <p>Students know what to do today. Parents can see progress, proof and completion time.</p>
-        <div class="actions">
-          <button class="dark large" data-view="signup">Parent Sign Up</button>
-          <button class="primary large" data-view="join">Student Join</button>
-          <button class="ghost large" data-view="demo">View Demo</button>
+      <div class="hero compact">
+        <div>
+          <p class="eyebrow">FOR FAMILIES</p>
+          <h1>One dashboard for homework, deadlines, schedules and real progress.</h1>
+          <p class="lead">Students know what to do today. Parents see completion time, proof notes and learning streaks.</p>
+          <div class="hero-actions">
+            <button class="primary" onclick="go('signup')">Create family account</button>
+            <button class="secondary" onclick="go('demo')">View demo</button>
+          </div>
+        </div>
+        <div class="mini-dashboard">
+          <div class="mini-row"><span>Homework due soon</span><b>2</b></div>
+          <div class="mini-row"><span>Study streak</span><b>🔥 5 days</b></div>
+          <div class="mini-row"><span>Weekly progress</span><b>72%</b></div>
+          <div class="progress"><span style="width:72%"></span></div>
         </div>
       </div>
-      <div class="feature-grid">
-        <div class="feature"><b>Daily Homework</b><span>Record tasks and due dates.</span></div>
-        <div class="feature"><b>Family Account</b><span>One parent can manage multiple children.</span></div>
-        <div class="feature"><b>Study Buddies</b><span>Safe streaks and encouragement only.</span></div>
-        <div class="feature"><b>Proof + Timestamp</b><span>Less guessing, clearer follow-up.</span></div>
+
+      <div class="cards three">
+        <article class="card"><h3>For students</h3><p>See today’s tasks, homework, schedule, streak and revision plan in one place.</p></article>
+        <article class="card"><h3>For parents</h3><p>View proof, completion time, deadlines and progress without asking again and again.</p></article>
+        <article class="card"><h3>For siblings & buddies</h3><p>Children can see safe streaks and progress bars to encourage each other.</p></article>
       </div>
     </section>
 
-    <section id="signup" class="view">
-      <div class="form-card">
+    <section id="signup" class="view auth-view">
+      <div class="auth-card">
         <p class="eyebrow">PARENT ACCOUNT</p>
         <h2>Create your family dashboard</h2>
         <p class="muted">One parent account can manage multiple children.</p>
-        <form id="signupForm" autocomplete="off">
-          <label>Parent name
-            <input type="text" id="signupParentName" placeholder="Parent name" autocomplete="off" required />
-          </label>
-          <label>Email
-            <input type="email" id="signupEmail" placeholder="parent@email.com" autocomplete="off" required />
-          </label>
-          <label>Password
-            <input type="password" id="signupPassword" placeholder="Create a password" autocomplete="new-password" required />
-          </label>
-          <label>Family name
-            <input type="text" id="signupFamilyName" placeholder="Family name" autocomplete="off" required />
-          </label>
-          <button class="dark wide" type="submit">Create Account</button>
-        </form>
-        <p class="switch-note">Already registered? <a href="#" data-view="login">Login here</a></p>
+        <label>Parent name</label>
+        <input id="signupParent" autocomplete="off" placeholder="e.g. Parent name" />
+        <label>Email</label>
+        <input id="signupEmail" autocomplete="off" placeholder="parent@example.com" />
+        <label>Password</label>
+        <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Create a password" />
+        <label>Family name</label>
+        <input id="signupFamily" autocomplete="off" placeholder="e.g. Tan Family" />
+        <button class="primary full" onclick="createFamily()">Create account</button>
+        <p class="center muted">Already registered? <a onclick="go('login')">Login here</a></p>
       </div>
     </section>
 
-    <section id="login" class="view">
-      <div class="form-card">
+    <section id="login" class="view auth-view">
+      <div class="auth-card">
         <p class="eyebrow">LOGIN</p>
-        <h2>Welcome back</h2>
-        <div class="tabs">
-          <button class="tab active" data-tab="parentLoginBox">Parent Login</button>
-          <button class="tab" data-tab="studentLoginBox">Student Login</button>
+        <h2>Continue to MyStudy Support</h2>
+        <div class="tabs small-tabs">
+          <button class="active" onclick="switchLogin('parent')">Parent</button>
+          <button onclick="switchLogin('student')">Student</button>
         </div>
-        <div id="parentLoginBox" class="tab-panel active">
-          <form id="parentLoginForm" autocomplete="off">
-            <label>Email
-              <input type="email" id="loginEmail" placeholder="parent@email.com" autocomplete="off" required />
-            </label>
-            <label>Password
-              <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" required />
-            </label>
-            <button class="dark wide" type="submit">Login as Parent</button>
-          </form>
+        <div id="parentLoginForm">
+          <label>Email</label>
+          <input id="loginEmail" autocomplete="off" placeholder="parent@example.com" />
+          <label>Password</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
+          <button class="primary full" onclick="parentLogin()">Parent login</button>
         </div>
-        <div id="studentLoginBox" class="tab-panel">
-          <form id="studentLoginForm" autocomplete="off">
-            <label>Family code
-              <input type="text" id="studentFamilyCode" placeholder="e.g. A7K2Q9" autocomplete="off" required />
-            </label>
-            <label>Student name
-              <input type="text" id="studentLoginName" placeholder="Student name" autocomplete="off" required />
-            </label>
-            <button class="dark wide" type="submit">Enter Student Dashboard</button>
-          </form>
+        <div id="studentLoginForm" class="hidden">
+          <label>Family code</label>
+          <input id="studentCode" autocomplete="off" placeholder="e.g. STUDY-1234" />
+          <label>Student name</label>
+          <input id="studentName" autocomplete="off" placeholder="e.g. Student A" />
+          <button class="primary full" onclick="studentJoin()">Student join</button>
         </div>
       </div>
     </section>
 
-    <section id="join" class="view">
-      <div class="form-card">
-        <p class="eyebrow">STUDENT JOIN</p>
-        <h2>Join your family account</h2>
-        <p class="muted">Ask your parent for the family code.</p>
-        <form id="joinForm" autocomplete="off">
-          <label>Family code
-            <input type="text" id="joinCode" placeholder="Family code" autocomplete="off" required />
-          </label>
-          <label>Your name
-            <input type="text" id="joinName" placeholder="Student name" autocomplete="off" required />
-          </label>
-          <button class="dark wide" type="submit">Join Family</button>
-        </form>
+    <section id="parent" class="view">
+      <div class="section-head">
+        <div><p class="eyebrow">PARENT DASHBOARD</p><h2>Manage your children</h2></div>
+        <button class="primary" onclick="openAddChild()">+ Add child</button>
+      </div>
+      <div class="card family-card">
+        <h3>Family account</h3>
+        <p class="muted">Family code links children to your account. A real version will use secure login and cloud database.</p>
+        <div class="family-code" id="familyCode">Family Code: STUDY-0000</div>
+      </div>
+      <div id="childrenList" class="cards children-grid"></div>
+      <div class="card split-card">
+        <div><h3>What parent can see</h3><ul><li>Homework status, proof and completion time</li><li>Last opened time and daily streak</li><li>Upcoming deadlines and weekly progress</li><li>All children under the family account</li></ul></div>
+        <div><h3>What siblings can see</h3><ul><li>Streak</li><li>Today completed count</li><li>Weekly progress bar</li><li>Badges and encouragement only</li></ul></div>
       </div>
     </section>
 
-    <section id="parentDashboard" class="view">
-      <div class="page-head">
-        <div>
-          <p class="eyebrow">PARENT DASHBOARD</p>
-          <h2 id="parentTitle">My Family</h2>
-          <p id="familyCodeLine" class="muted"></p>
-        </div>
-        <div class="actions">
-          <button class="primary" id="copyCodeBtn">Copy Family Code</button>
-          <button class="dark" id="toggleAddChild">+ Add child</button>
-          <button class="ghost" id="logoutParent">Logout</button>
+    <section id="student" class="view">
+      <div id="setupPanel" class="card setup-card">
+        <p class="eyebrow">CHILD SETUP</p>
+        <h2>Build this student’s dashboard</h2>
+        <p class="muted">Upload or enter the child’s own exam schedule, timetable and activities. Nothing is preloaded from another student.</p>
+        <div class="setup-grid">
+          <div class="setup-step"><b>1</b><h4>Upload exam / WA schedule</h4><p>PDF, image or manual entry.</p><button onclick="openImport('exam')">Upload exam schedule</button></div>
+          <div class="setup-step"><b>2</b><h4>Upload school timetable</h4><p>Use this to show today’s classes and pack list.</p><button onclick="openImport('timetable')">Upload timetable</button></div>
+          <div class="setup-step"><b>3</b><h4>Add tuition & activities</h4><p>Tuition, CCA, enrichment and grading dates.</p><button onclick="openImport('activity')">Add activity</button></div>
         </div>
       </div>
-      <div id="addChildPanel" class="form-card slim hidden">
-        <h3>Add child</h3>
-        <form id="addChildForm" class="inline-form" autocomplete="off">
-          <input id="childName" type="text" placeholder="Child name" required />
-          <input id="childLevel" type="text" placeholder="Level, e.g. Sec 1" required />
-          <input id="childSchool" type="text" placeholder="School / programme" />
-          <button class="dark" type="submit">Add</button>
-        </form>
-      </div>
-      <div id="childrenGrid" class="children-grid"></div>
-      <div class="section-card">
-        <h3>Family Progress</h3>
-        <p class="muted">Children can see this safe summary only: streak, completed count and weekly progress.</p>
-        <div id="familyProgress" class="progress-list"></div>
-      </div>
-    </section>
 
-    <section id="studentDashboard" class="view">
-      <div class="page-head">
-        <div>
-          <p class="eyebrow">STUDENT DASHBOARD</p>
-          <h2 id="studentTitle">Hi Student</h2>
-          <p class="muted">Your tasks, streak and safe buddy progress.</p>
+      <div class="student-shell">
+        <div class="student-nav">
+          <button class="active" onclick="studentTab('dashboard')">Dashboard</button>
+          <button onclick="studentTab('homework')">Homework</button>
+          <button onclick="studentTab('schedule')">Schedule</button>
+          <button onclick="studentTab('exam')">Exam Board</button>
+          <button onclick="studentTab('weekly')">Weekly Plan</button>
+          <button onclick="studentTab('revision')">Revision Lab</button>
+          <button onclick="studentTab('progress')">Progress</button>
         </div>
-        <div class="actions">
-          <button class="dark" id="checkInBtn">Check in today</button>
-          <button class="ghost" id="logoutStudent">Logout</button>
+        <div id="studentDashboard" class="student-panel active">
+          <div class="section-head compact-head"><div><p class="eyebrow">STUDENT DASHBOARD</p><h2 id="studentGreeting">Hi Student 👋</h2><p class="muted">Today’s plan, homework, deadlines and safe buddy progress.</p></div><button class="primary" onclick="checkIn()">Check in today</button></div>
+          <div class="dashboard-grid">
+            <div class="card"><p class="eyebrow">TODAY</p><h3>Today’s tasks</h3><div id="todayTasks"></div><button class="soft full" onclick="studentTab('homework')">Add homework</button></div>
+            <div class="card"><p class="eyebrow">DAILY HABIT</p><h3>Study streak</h3><div class="big-stat" id="streakStat">🔥 0 days</div></div>
+            <div class="card"><p class="eyebrow">DEADLINE</p><h3>Next deadline</h3><div id="nextDeadline">No exam schedule uploaded yet.</div></div>
+            <div class="card"><p class="eyebrow">SCHEDULE</p><h3>Today’s schedule</h3><div id="todaySchedule">No timetable uploaded yet.</div></div>
+          </div>
+          <div class="card"><h3>Family Progress</h3><p class="muted">Sibling progress only. No private homework or proof is shown.</p><div id="familyProgress"></div></div>
+          <div class="card"><h3>Study Buddies</h3><p class="muted">Friends can only see streak, check-in and weekly progress.</p><div class="inline-form"><input id="buddyName" placeholder="Buddy name" /><input id="buddyStreak" placeholder="Streak" /><button onclick="addBuddy()">Add buddy</button></div><div id="buddyList"></div></div>
         </div>
-      </div>
-      <div class="student-grid">
-        <div class="card">
-          <p class="label">Today</p>
-          <h3>Today’s Tasks</h3>
-          <div id="taskList"></div>
-          <button class="primary wide" id="completeTaskBtn">Complete one task</button>
-        </div>
-        <div class="card">
-          <p class="label">Daily Habit</p>
-          <h3>Study Streak</h3>
-          <div class="streak"><span>🔥</span><b id="streakNumber">0</b><span>days</span></div>
-        </div>
-      </div>
-      <div class="section-card">
-        <h3>Family Progress</h3>
-        <p class="muted">Sibling progress only. No private homework or proof is shown.</p>
-        <div id="studentFamilyProgress" class="progress-list"></div>
-      </div>
-      <div class="section-card">
-        <h3>Study Buddies</h3>
-        <p class="muted">Friends can only see streak, check-in and weekly progress.</p>
-        <form id="buddyForm" class="inline-form" autocomplete="off">
-          <input id="buddyName" type="text" placeholder="Buddy name" required />
-          <input id="buddyStreak" type="number" placeholder="Streak" min="0" />
-          <button class="dark" type="submit">Add Buddy</button>
-        </form>
-        <div id="buddyList" class="buddy-list"></div>
+        <div id="studentHomework" class="student-panel"><div class="section-head"><div><p class="eyebrow">DAILY HOMEWORK</p><h2>Homework Log</h2></div><button class="primary" onclick="openHomeworkModal()">+ Add homework</button></div><div id="homeworkList" class="stack"></div></div>
+        <div id="studentSchedule" class="student-panel"><div class="section-head"><div><p class="eyebrow">SCHEDULE</p><h2>School, tuition and activities</h2></div><button class="primary" onclick="openImport('activity')">+ Add activity</button></div><div id="scheduleList" class="stack empty-box">No timetable or activities yet. Upload a timetable or add activities.</div></div>
+        <div id="studentExam" class="student-panel"><div class="section-head"><div><p class="eyebrow">EXAM / WA BOARD</p><h2>Assessment tracker</h2></div><button class="primary" onclick="openImport('exam')">+ Import schedule</button></div><div id="examList" class="stack empty-box">No exam schedule uploaded yet.</div></div>
+        <div id="studentWeekly" class="student-panel"><div class="section-head"><div><p class="eyebrow">WEEKLY PLAN</p><h2>Longer plans and reminders</h2></div><button class="primary" onclick="addWeeklyPlan()">+ Add plan</button></div><div id="weeklyList" class="stack"></div></div>
+        <div id="studentRevision" class="student-panel"><p class="eyebrow">REVISION LAB</p><h2>Practice and mistake review</h2><div class="cards two"><div class="card"><h3>Short practice</h3><p class="muted">A real version can use level-based question banks or AI-generated practice.</p><button class="primary" onclick="completePractice()">Complete one practice round</button></div><div class="card"><h3>Mistake Book</h3><p class="muted">Mistakes appear here after practice. Mastered after repeated correct review.</p><div id="mistakeBox">No active mistakes yet.</div></div></div></div>
+        <div id="studentProgress" class="student-panel"><p class="eyebrow">PROGRESS</p><h2>Progress summary</h2><div class="cards three"><div class="card"><h3>Homework</h3><div id="hwProgress" class="big-stat">0%</div></div><div class="card"><h3>Weekly progress</h3><div id="wkProgress" class="big-stat">0%</div></div><div class="card"><h3>Streak</h3><div id="progressStreak" class="big-stat">0 days</div></div></div></div>
       </div>
     </section>
 
     <section id="demo" class="view">
-      <div class="page-head">
-        <div>
-          <p class="eyebrow">DEMO</p>
-          <h2>How MyStudy Support works</h2>
-          <p class="muted">A parent creates a family account, adds children, and students join with a family code.</p>
-        </div>
-        <button class="dark" id="loadDemoBtn">Load demo dashboard</button>
-      </div>
-      <div class="feature-grid">
-        <div class="feature"><b>Parent View</b><span>Full homework, proof, timestamps and progress.</span></div>
-        <div class="feature"><b>Student View</b><span>Daily tasks, streaks and safe family progress.</span></div>
-        <div class="feature"><b>Siblings</b><span>Can see streak and progress, not private details.</span></div>
-        <div class="feature"><b>Study Buddies</b><span>Encouragement without oversharing.</span></div>
-      </div>
+      <div class="section-head"><div><p class="eyebrow">DEMO</p><h2>See how a family dashboard works</h2><p class="muted">Demo data is generic. No real family information is used.</p></div><button class="primary" onclick="loadDemo()">Load demo family</button></div>
+      <div class="cards three"><article class="card"><h3>Parent view</h3><p>Manage multiple children and see proof, timestamps and homework progress.</p></article><article class="card"><h3>Student view</h3><p>Daily dashboard with homework, schedule, exam board, revision and streak.</p></article><article class="card"><h3>Safe motivation</h3><p>Siblings and buddies see only streak and progress, not private homework details.</p></article></div>
     </section>
   </main>
 
+  <div id="modal" class="modal hidden"><div class="modal-card"><button class="close" onclick="closeModal()">×</button><div id="modalContent"></div></div></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="script.js?v=6"></script>
+  <script src="script.js?v=7.0"></script>
 </body>
 </html>

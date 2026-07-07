@@ -1,5 +1,14 @@
-# MyStudy Support v6 - Working Signup Prototype
+# MyStudy Support v7 - Full Student Dashboard + Upload Setup
 
-Includes visible Parent Sign Up, Parent Login, Student Join, family dashboard, multiple children, sibling progress, and study buddies.
+Prototype for a family study dashboard.
 
-This is still a front-end prototype using browser localStorage. It does not yet include production authentication or a cloud database.
+## Includes
+- Parent signup/login prototype
+- Student join with family code prototype
+- Multiple child profiles
+- Full student dashboard inspired by Evans Study HQ
+- Homework, schedule, exam board, weekly plan, revision lab and progress
+- Upload/import setup placeholders for exam schedules and timetables
+- Family Progress and Study Buddies with safe visibility
+
+This is still a front-end prototype. Data is saved in localStorage for flow testing.
