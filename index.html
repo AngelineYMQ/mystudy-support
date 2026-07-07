@@ -76,15 +76,15 @@
           </div>
 
           <form id="parentLogin" class="auth-form active">
-            <label>Email<input type="email" id="loginEmail" placeholder="parent@email.com" required></label>
-            <label>Password<input type="password" id="loginPassword" placeholder="••••••••" required></label>
+            <label>Email<input type="email" id="loginEmail" name="mss_login_email" placeholder="parent@email.com" autocomplete="off" required></label>
+            <label>Password<input type="password" id="loginPassword" name="mss_login_password" placeholder="••••••••" autocomplete="current-password" required></label>
             <button class="primary wide" type="submit">Login as Parent</button>
             <p class="form-note">No account yet? <a href="#" data-view="signup">Create parent account</a></p>
           </form>
 
           <form id="studentLogin" class="auth-form">
-            <label>Family Code<input type="text" id="studentFamilyCode" placeholder="e.g. A7K2Q9" required></label>
-            <label>Student Name<input type="text" id="studentName" placeholder="e.g. Alex" required></label>
+            <label>Family Code<input type="text" id="studentFamilyCode" name="mss_student_family_code" placeholder="e.g. A7K2Q9" autocomplete="off" required></label>
+            <label>Student Name<input type="text" id="studentName" name="mss_student_name" placeholder="Student name" autocomplete="off" required></label>
             <button class="primary wide" type="submit">Enter Student Dashboard</button>
             <p class="form-note">Ask your parent for the family code.</p>
           </form>
@@ -98,11 +98,11 @@
             <h2>Create your family dashboard</h2>
             <p>One parent account can manage multiple children.</p>
           </div>
-          <form id="signupForm" class="auth-form active">
-            <label>Parent Name<input type="text" id="signupParentName" placeholder="Your name" required></label>
-            <label>Email<input type="email" id="signupEmail" placeholder="parent@email.com" required></label>
-            <label>Password<input type="password" id="signupPassword" placeholder="Create a password" required></label>
-            <label>Family Name<input type="text" id="signupFamilyName" placeholder="e.g. Lee Family" required></label>
+          <form id="signupForm" autocomplete="off" class="auth-form active">
+            <label>Parent Name<input type="text" id="signupParentName" name="mss_signup_parent_name" placeholder="Parent name" autocomplete="off" required></label>
+            <label>Email<input type="email" id="signupEmail" name="mss_signup_email" placeholder="parent@email.com" autocomplete="off" required></label>
+            <label>Password<input type="password" id="signupPassword" name="mss_signup_password" placeholder="Create a password" autocomplete="new-password" required></label>
+            <label>Family Name<input type="text" id="signupFamilyName" name="mss_signup_family_name" placeholder="Family name" autocomplete="off" required></label>
             <button class="primary wide" type="submit">Create Account</button>
             <p class="form-note">Already registered? <a href="#" data-view="login">Login here</a></p>
           </form>
@@ -117,8 +117,8 @@
             <p>Enter the family code from your parent.</p>
           </div>
           <form id="joinForm" class="auth-form active">
-            <label>Family Code<input type="text" id="joinCode" placeholder="A7K2Q9" required></label>
-            <label>Your Name<input type="text" id="joinName" placeholder="e.g. Alex" required></label>
+            <label>Family Code<input type="text" id="joinCode" name="mss_join_code" placeholder="A7K2Q9" autocomplete="off" required></label>
+            <label>Your Name<input type="text" id="joinName" name="mss_join_name" placeholder="Student name" autocomplete="off" required></label>
             <button class="primary wide" type="submit">Join Family</button>
           </form>
         </div>
@@ -140,10 +140,10 @@
 
         <div id="addChildPanel" class="card form-card hidden">
           <h3>Add Child</h3>
-          <form id="addChildForm" class="inline-form">
-            <input type="text" id="childName" placeholder="Child name" required>
-            <input type="text" id="childLevel" placeholder="Level, e.g. Sec 1" required>
-            <input type="text" id="childSchool" placeholder="School / Programme">
+          <form id="addChildForm" autocomplete="off" class="inline-form">
+            <input type="text" id="childName" name="mss_child_name" placeholder="Child name" autocomplete="off" required>
+            <input type="text" id="childLevel" name="mss_child_level" placeholder="Level, e.g. Sec 1" autocomplete="off" required>
+            <input type="text" id="childSchool" name="mss_child_school" placeholder="School / Programme" autocomplete="off">
             <button class="primary" type="submit">Add</button>
           </form>
         </div>
