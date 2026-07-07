@@ -1,6 +1,8 @@
-# MyStudy Support v3 - Login Prototype
+# MyStudy Support v4 - Neutral Login Prototype
 
-A frontend prototype with:
+A neutral prototype with no personal family names.
+
+Includes:
 - Parent Sign Up
 - Parent Login
 - Student Join / Student Login with Family Code

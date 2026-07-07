@@ -2,17 +2,17 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const defaultFamily = {
-  parentName: 'Angeline',
+  parentName: 'Demo Parent',
   email: 'parent@email.com',
   familyName: 'Demo Family',
-  familyCode: 'A7K2Q9',
+  familyCode: 'DEMO24',
   children: [
-    { id: 'evans', name: 'Evans', level: 'Sec 1', school: 'Nan Chiau High School', streak: 5, progress: 68, tasksDone: 3, tasksTotal: 4 },
-    { id: 'cyrus', name: 'Cyrus', level: 'P4', school: 'Primary School', streak: 3, progress: 54, tasksDone: 2, tasksTotal: 3 }
+    { id: 'student-a', name: 'Student A', level: 'Sec 1', school: 'Secondary School', streak: 5, progress: 68, tasksDone: 3, tasksTotal: 4 },
+    { id: 'student-b', name: 'Student B', level: 'P4', school: 'Primary School', streak: 3, progress: 54, tasksDone: 2, tasksTotal: 3 }
   ],
   buddies: [
-    { name: 'Jayden', streak: 7, progress: 72, checkedIn: true },
-    { name: 'Lucas', streak: 2, progress: 45, checkedIn: false }
+    { name: 'Study Buddy 1', streak: 7, progress: 72, checkedIn: true },
+    { name: 'Study Buddy 2', streak: 2, progress: 45, checkedIn: false }
   ]
 };
 
@@ -20,13 +20,13 @@ let state = loadState();
 let currentChildId = state.children[0]?.id || null;
 
 function loadState() {
-  const saved = localStorage.getItem('mystudy_support_demo_v3');
+  const saved = localStorage.getItem('mystudy_support_demo_v4_neutral');
   if (saved) return JSON.parse(saved);
-  localStorage.setItem('mystudy_support_demo_v3', JSON.stringify(defaultFamily));
+  localStorage.setItem('mystudy_support_demo_v4_neutral', JSON.stringify(defaultFamily));
   return structuredClone(defaultFamily);
 }
 function saveState() {
-  localStorage.setItem('mystudy_support_demo_v3', JSON.stringify(state));
+  localStorage.setItem('mystudy_support_demo_v4_neutral', JSON.stringify(state));
   toast('Saved');
 }
 function toast(msg) {
