@@ -1,37 +1,218 @@
-const $ = (q, root=document) => root.querySelector(q);
-const $$ = (q, root=document) => [...root.querySelectorAll(q)];
-const defaultState = {
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+const defaultFamily = {
   parentName: 'Angeline',
-  familyName: 'Yang Family',
-  familyCode: 'MYSTUDY-2468',
+  email: 'parent@email.com',
+  familyName: 'Demo Family',
+  familyCode: 'A7K2Q9',
   children: [
-    { id:'evans', name:'Evans', level:'Sec 1', school:'Nan Chiau High School', streak:5, progress:72, todayDone:3, todayTotal:4 },
-    { id:'cyrus', name:'Cyrus', level:'P4', school:'Primary School', streak:3, progress:55, todayDone:2, todayTotal:3 }
+    { id: 'evans', name: 'Evans', level: 'Sec 1', school: 'Nan Chiau High School', streak: 5, progress: 68, tasksDone: 3, tasksTotal: 4 },
+    { id: 'cyrus', name: 'Cyrus', level: 'P4', school: 'Primary School', streak: 3, progress: 54, tasksDone: 2, tasksTotal: 3 }
   ],
   buddies: [
-    { name:'Jayden', code:'JAYDEN-4821', streak:7, progress:80, checkedIn:true },
-    { name:'Lucas', code:'LUCAS-1620', streak:2, progress:42, checkedIn:false }
-  ],
-  student:{ name:'Evans', streak:0, checkedInDates:[] }
+    { name: 'Jayden', streak: 7, progress: 72, checkedIn: true },
+    { name: 'Lucas', streak: 2, progress: 45, checkedIn: false }
+  ]
 };
-let state = JSON.parse(localStorage.getItem('mystudyDemo') || 'null') || defaultState;
-function save(){ localStorage.setItem('mystudyDemo', JSON.stringify(state)); render(); }
-function openView(id){ $$('.view').forEach(v=>v.classList.toggle('active', v.id===id)); $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===id)); window.scrollTo({top:0,behavior:'smooth'}); }
-$$('.nav-btn').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.view)));
-$$('[data-open]').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.open)));
-$('#saveFamilyBtn').addEventListener('click',()=>{ state.parentName=$('#parentName').value||state.parentName; state.familyName=$('#familyName').value||state.familyName; save(); });
-$('#addChildBtn').addEventListener('click',()=>$('#childDialog').showModal());
-$('#confirmAddChild').addEventListener('click',(e)=>{ e.preventDefault(); const name=$('#newChildName').value.trim(); if(!name) return; state.children.push({id:name.toLowerCase().replace(/\W+/g,'-'), name, level:$('#newChildLevel').value||'Student', school:$('#newChildSchool').value||'School', streak:0, progress:0, todayDone:0, todayTotal:3}); $('#childDialog').close(); $('#newChildName').value=''; $('#newChildLevel').value=''; $('#newChildSchool').value=''; save(); });
-$('#joinBtn').addEventListener('click',()=>{ if($('#joinCode').value.trim()!==state.familyCode){ alert('Family code does not match this demo.'); return;} state.student.name=$('#studentName').value.trim()||state.student.name; save(); openView('student'); });
-$('#checkInBtn').addEventListener('click',()=>{ const today = new Date().toISOString().slice(0,10); if(!state.student.checkedInDates.includes(today)) state.student.checkedInDates.push(today); state.student.streak = Math.max(state.student.streak, state.student.checkedInDates.length); save(); });
-$$('.demoTask').forEach(cb=>cb.addEventListener('change',()=>{ const done=$$('.demoTask').filter(x=>x.checked).length; $('#todoCount').textContent=`${done}/3`; if(done>0){ const today=new Date().toISOString().slice(0,10); if(!state.student.checkedInDates.includes(today)) state.student.checkedInDates.push(today); state.student.streak = Math.max(state.student.streak, state.student.checkedInDates.length); } save(); }));
-$('#addBuddyBtn').addEventListener('click',()=>{ const code=$('#buddyCode').value.trim(); if(!code) return; const name=code.split('-')[0].toLowerCase().replace(/^./,c=>c.toUpperCase()); state.buddies.push({name, code, streak:1, progress:20, checkedIn:false}); $('#buddyCode').value=''; save(); });
-function render(){
-  $('#parentName').value=state.parentName; $('#familyName').value=state.familyName; $('#familyCode').textContent=state.familyCode;
-  $('#childrenList').innerHTML = state.children.map(c=>`<div class="card child-card"><span class="pill">${c.level}</span><h3>${c.name}</h3><p class="muted">${c.school}</p><div class="mini-row"><span>Streak</span><b>🔥 ${c.streak} days</b><small>${c.progress}%</small></div><div class="small-bar"><span style="width:${c.progress}%"></span></div><p class="muted">Today: ${c.todayDone}/${c.todayTotal} tasks done</p></div>`).join('');
-  $('#streakText').textContent=`🔥 ${state.student.streak || state.student.checkedInDates.length} days`;
-  const days=['M','T','W','T','F','S','S']; $('#streakDots').innerHTML = days.map((d,i)=>`<span class="dot ${i<state.student.checkedInDates.length?'on':''}">${d}</span>`).join('');
-  $('#familyProgress').innerHTML = state.children.map(c=>`<div class="family-progress-item"><strong>${c.name}</strong><span>🔥 ${c.streak}-day streak · ${c.todayDone}/${c.todayTotal} today</span><div class="small-bar"><span style="width:${c.progress}%"></span></div></div>`).join('');
-  $('#buddyList').innerHTML = state.buddies.map(b=>`<div class="buddy-item"><strong>${b.name}</strong><span>🔥 ${b.streak}-day streak · ${b.checkedIn?'Checked in today':'Not checked in yet'}</span><div class="small-bar"><span style="width:${b.progress}%"></span></div><button class="secondary" style="margin-top:10px">Send encouragement</button></div>`).join('');
+
+let state = loadState();
+let currentChildId = state.children[0]?.id || null;
+
+function loadState() {
+  const saved = localStorage.getItem('mystudy_support_demo_v3');
+  if (saved) return JSON.parse(saved);
+  localStorage.setItem('mystudy_support_demo_v3', JSON.stringify(defaultFamily));
+  return structuredClone(defaultFamily);
 }
-render();
+function saveState() {
+  localStorage.setItem('mystudy_support_demo_v3', JSON.stringify(state));
+  toast('Saved');
+}
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 1300);
+}
+function showView(id) {
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#' + id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (id === 'parentDashboard') renderParent();
+  if (id === 'studentDashboard') renderStudent();
+}
+
+document.addEventListener('click', e => {
+  const viewBtn = e.target.closest('[data-view]');
+  if (viewBtn) {
+    e.preventDefault();
+    showView(viewBtn.dataset.view);
+  }
+  if (e.target.matches('[data-demo-login]')) {
+    currentChildId = state.children[0]?.id || null;
+    showView('parentDashboard');
+  }
+});
+
+$$('[data-auth-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    $$('.auth-form').forEach(f => f.classList.remove('active'));
+    $('#' + btn.dataset.authTab).classList.add('active');
+  });
+});
+
+$('#signupForm').addEventListener('submit', e => {
+  e.preventDefault();
+  state = {
+    parentName: $('#signupParentName').value.trim(),
+    email: $('#signupEmail').value.trim(),
+    familyName: $('#signupFamilyName').value.trim(),
+    familyCode: makeCode(),
+    children: [],
+    buddies: []
+  };
+  saveState();
+  showView('parentDashboard');
+});
+
+$('#parentLogin').addEventListener('submit', e => {
+  e.preventDefault();
+  showView('parentDashboard');
+});
+
+$('#studentLogin').addEventListener('submit', e => {
+  e.preventDefault();
+  const code = $('#studentFamilyCode').value.trim().toUpperCase();
+  const name = $('#studentName').value.trim().toLowerCase();
+  if (code !== state.familyCode) return toast('Family code not found');
+  const child = state.children.find(c => c.name.toLowerCase() === name);
+  if (!child) return toast('Student not found. Parent can add child first.');
+  currentChildId = child.id;
+  showView('studentDashboard');
+});
+
+$('#joinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const code = $('#joinCode').value.trim().toUpperCase();
+  const name = $('#joinName').value.trim();
+  if (code !== state.familyCode) return toast('Family code not found');
+  let child = state.children.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (!child) {
+    child = { id: slug(name), name, level: 'Student', school: '', streak: 0, progress: 0, tasksDone: 0, tasksTotal: 3 };
+    state.children.push(child);
+    saveState();
+  }
+  currentChildId = child.id;
+  showView('studentDashboard');
+});
+
+$('#showAddChild').addEventListener('click', () => $('#addChildPanel').classList.toggle('hidden'));
+$('#copyFamilyCode').addEventListener('click', async () => {
+  await navigator.clipboard?.writeText(state.familyCode);
+  toast('Family code copied: ' + state.familyCode);
+});
+$('#logoutParent').addEventListener('click', () => showView('landing'));
+$('#logoutStudent').addEventListener('click', () => showView('landing'));
+
+$('#addChildForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#childName').value.trim();
+  state.children.push({
+    id: slug(name) + '-' + Date.now().toString().slice(-4),
+    name,
+    level: $('#childLevel').value.trim(),
+    school: $('#childSchool').value.trim(),
+    streak: 0,
+    progress: 0,
+    tasksDone: 0,
+    tasksTotal: 3
+  });
+  e.target.reset();
+  saveState();
+  renderParent();
+});
+
+$('#studentCheckin').addEventListener('click', () => {
+  const child = state.children.find(c => c.id === currentChildId);
+  if (!child) return;
+  child.streak += 1;
+  child.progress = Math.min(100, child.progress + 5);
+  saveState();
+  renderStudent();
+});
+$('#completeTask').addEventListener('click', () => {
+  const child = state.children.find(c => c.id === currentChildId);
+  if (!child) return;
+  child.tasksDone = Math.min(child.tasksTotal, child.tasksDone + 1);
+  child.progress = Math.min(100, child.progress + 8);
+  if (child.tasksDone === child.tasksTotal) child.streak += 1;
+  saveState();
+  renderStudent();
+});
+$('#buddyForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#buddyName').value.trim();
+  if (!name) return;
+  state.buddies.push({ name, streak: Number($('#buddyStreak').value || 0), progress: Math.floor(Math.random() * 50) + 30, checkedIn: Math.random() > .4 });
+  e.target.reset();
+  saveState();
+  renderStudent();
+});
+
+function renderParent() {
+  $('#parentTitle').textContent = `${state.familyName || 'My Family'} · ${state.parentName || 'Parent'}`;
+  $('#familyCodeLine').textContent = `Family Code: ${state.familyCode} · Share this code with your child to join.`;
+  $('#childrenGrid').innerHTML = state.children.map(child => `
+    <div class="child-card">
+      <h3>${child.name}</h3>
+      <p class="muted">${child.level}${child.school ? ' · ' + child.school : ''}</p>
+      <div class="child-stats">
+        <div class="stat"><b>${child.streak}</b><span>streak</span></div>
+        <div class="stat"><b>${child.tasksDone}/${child.tasksTotal}</b><span>today</span></div>
+        <div class="stat"><b>${child.progress}%</b><span>week</span></div>
+      </div>
+      <button class="secondary wide" onclick="openChild('${child.id}')">Open child dashboard</button>
+    </div>`).join('') || `<div class="card"><h3>No children yet</h3><p>Add your first child to create their dashboard.</p></div>`;
+  renderFamilyProgress($('#familyProgress'));
+}
+window.openChild = id => { currentChildId = id; showView('studentDashboard'); };
+
+function renderStudent() {
+  const child = state.children.find(c => c.id === currentChildId) || state.children[0];
+  if (!child) return showView('join');
+  currentChildId = child.id;
+  $('#studentTitle').textContent = `Hi ${child.name} 👋`;
+  $('#studentStreak').textContent = child.streak;
+  $('#studentTasks').innerHTML = [
+    'Check homework due tomorrow',
+    'Complete one homework task',
+    'Do one short revision round'
+  ].map((task, i) => `<label class="task"><input type="checkbox" ${i < child.tasksDone ? 'checked' : ''} disabled><span>${task}</span></label>`).join('');
+  renderFamilyProgress($('#studentFamilyProgress'), child.id);
+  $('#buddyList').innerHTML = state.buddies.map(b => `
+    <div class="buddy">
+      <h4>${b.name}</h4>
+      <p>🔥 ${b.streak}-day streak</p>
+      <p>${b.checkedIn ? 'Checked in today' : 'Not checked in yet'}</p>
+      <div class="bar"><i style="width:${b.progress}%"></i></div>
+      <p class="muted">${b.progress}% weekly progress</p>
+      <button class="secondary wide" onclick="toast('Encouragement sent to ${b.name}')">Send encouragement</button>
+    </div>`).join('') || `<p class="muted">No buddies yet. Add a study buddy to see safe streaks.</p>`;
+}
+
+function renderFamilyProgress(target, currentId) {
+  target.innerHTML = state.children.map(c => `
+    <div class="progress-row ${c.id === currentId ? 'highlight' : ''}">
+      <b>${c.name}</b>
+      <div>
+        <div class="bar"><i style="width:${c.progress}%"></i></div>
+        <small>${c.tasksDone}/${c.tasksTotal} tasks today · 🔥 ${c.streak}-day streak</small>
+      </div>
+      <strong>${c.progress}%</strong>
+    </div>`).join('') || `<p class="muted">No child profiles yet.</p>`;
+}
+function makeCode() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+function slug(str) { return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }

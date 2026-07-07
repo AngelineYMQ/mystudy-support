@@ -1,13 +1,11 @@
-# MyStudy Support v2 Prototype
+# MyStudy Support v3 - Login Prototype
 
-A lightweight commercial prototype for family accounts, multiple child profiles, sibling progress and study buddies.
+A frontend prototype with:
+- Parent Sign Up
+- Parent Login
+- Student Join / Student Login with Family Code
+- Multiple child profiles under one family
+- Family Progress
+- Study Buddies
 
-## Included
-- Parent signup-style demo
-- Add multiple children
-- Family code / student join demo
-- Family progress visible to siblings
-- Study buddy streak preview
-- Privacy logic explanation
-
-This is a front-end prototype using localStorage. It is for product validation, not a production authentication system.
+This version uses localStorage for demo only. Real production accounts should use Cloudflare Pages + D1 + secure authentication.
