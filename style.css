@@ -1171,3 +1171,37 @@ h3 { margin: 0; font-size: 17px; letter-spacing: -0.02em; }
 .login-help { margin-top: 14px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .login-help summary { cursor: pointer; color: var(--green); font-weight: 800; }
 .login-help p { margin: 8px 0 0; }
+
+/* v38 productisation panels: keep original card language, add editable upload areas */
+.product-panel { margin-bottom: 18px; }
+.product-grid.two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.upload-box, .manual-box { background: rgba(255,255,255,0.65); border: 1px solid rgba(47,107,95,0.12); border-radius: 18px; padding: 14px; }
+.upload-box h4, .manual-box h4, .upload-history h4 { margin: 0 0 10px; color: var(--pine, #2f6b5f); }
+.upload-box input[type="file"] { width: 100%; padding: 10px; border: 1px dashed rgba(47,107,95,0.35); border-radius: 14px; background: #fff; margin-bottom: 10px; }
+.upload-box textarea { width: 100%; min-height: 94px; resize: vertical; margin-bottom: 10px; }
+.compact-form { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.compact-form .full-width, .compact-form button { grid-column: 1 / -1; }
+.compact-form input, .compact-form select, .upload-box textarea, .preview-row input { border: 1px solid rgba(47,107,95,0.16); border-radius: 12px; padding: 10px 12px; font: inherit; background: #fff; color: inherit; }
+.upload-history { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(47,107,95,0.1); }
+.upload-file-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(47,107,95,0.08); }
+.upload-file-row span { color: var(--muted, #667); font-size: 0.86rem; }
+.assessment-counts { margin: 12px 0; color: var(--muted, #667); font-size: 0.88rem; }
+.assessment-list { display: grid; gap: 12px; margin-top: 10px; }
+.assessment-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 14px; align-items: start; padding: 14px; border: 1px solid rgba(47,107,95,0.12); border-radius: 18px; background: #fff; }
+.assessment-main h3 { margin: 6px 0 4px; }
+.assessment-main p { margin: 3px 0; color: var(--muted, #667); }
+.assessment-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.cca-list { display: grid; gap: 10px; margin-top: 12px; }
+.cca-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px; background: #fff; border: 1px solid rgba(47,107,95,0.12); border-radius: 16px; }
+.cca-row p { margin: 3px 0 0; color: var(--muted, #667); }
+.text-btn.danger { color: #b04a4a; }
+.parse-preview { margin-top: 10px; }
+.preview-table { display: grid; gap: 8px; margin: 10px 0; }
+.preview-row { display: grid; grid-template-columns: 32px repeat(4, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.preview-row.assessment { grid-template-columns: 32px repeat(5, minmax(0, 1fr)); }
+.preview-row span { font-weight: 700; color: var(--pine, #2f6b5f); }
+@media (max-width: 860px) {
+  .product-grid.two-cols, .assessment-row, .cca-row { grid-template-columns: 1fr; }
+  .compact-form, .preview-row, .preview-row.assessment { grid-template-columns: 1fr; }
+  .assessment-actions { align-items: stretch; }
+}

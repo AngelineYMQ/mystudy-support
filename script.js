@@ -5746,3 +5746,354 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') eshqClearSession();
 });
+
+/* v38 Productisation extension: parent-managed CCA, timetable files and assessments.
+   This preserves the Evans v34 UI and adds editable/upload sections inside Schedule and Assessments. */
+LS.assessments = 'eshq_v38_assessments';
+LS.uploadFiles = 'eshq_v38_uploaded_files';
+
+const ASSESSMENT_TYPES = ['WA1', 'WA2', 'WA3', 'End-of-Year Exam', 'Mock Exam', 'Class Test', 'Diagnostic Test', 'AEIS Mock', 'PSLE Prelim', 'O-Level Prelim', 'Other'];
+const CCA_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+function v38Escape(value = '') {
+  return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+function v38Id(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+function getAssessments() { return load(LS.assessments, []); }
+function setAssessments(list) { save(LS.assessments, list); }
+function getUploadedFiles() { return load(LS.uploadFiles, []); }
+function setUploadedFiles(list) { save(LS.uploadFiles, list); }
+function addUploadedFile(file, category) {
+  if (!file) return null;
+  const record = {
+    id: v38Id('file'),
+    category,
+    name: file.name,
+    type: file.type || 'unknown',
+    size: file.size || 0,
+    uploadedAt: new Date().toISOString()
+  };
+  const files = getUploadedFiles();
+  files.unshift(record);
+  setUploadedFiles(files.slice(0, 50));
+  return record;
+}
+function fileSizeLabel(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function dateValueForAssessment(a) { return a.date || a.assessmentDate || ''; }
+function assessmentSort(a, b) {
+  const da = dateValueForAssessment(a) || '9999-99-99';
+  const db = dateValueForAssessment(b) || '9999-99-99';
+  return da.localeCompare(db);
+}
+function normaliseAssessment(row = {}) {
+  return {
+    id: row.id || v38Id('asmt'),
+    type: row.type || row.assessmentType || 'WA1',
+    subject: row.subject || 'General',
+    name: row.name || row.assessmentName || row.title || '',
+    date: row.date || row.assessmentDate || '',
+    startTime: row.startTime || row.time || '',
+    endTime: row.endTime || '',
+    scope: row.scope || row.topics || row.notes || '',
+    weightage: row.weightage || '',
+    targetScore: row.targetScore || '',
+    actualScore: row.actualScore || '',
+    status: row.status || row.revisionStatus || 'Not started',
+    notes: row.notes || '',
+    fileId: row.fileId || '',
+    createdAt: row.createdAt || new Date().toISOString()
+  };
+}
+function normaliseCca(row = {}) {
+  const date = row.date || '';
+  return {
+    id: row.id || v38Id('cca'),
+    type: 'CCA',
+    title: row.title || row.ccaName || row.name || '',
+    day: row.day || '',
+    date,
+    time: row.time || [row.startTime, row.endTime].filter(Boolean).join('–'),
+    venue: row.venue || row.location || '',
+    notes: row.notes || [row.coach ? `Coach: ${row.coach}` : '', row.term ? `Term: ${row.term}` : ''].filter(Boolean).join(' · '),
+    fileId: row.fileId || '',
+    createdAt: row.createdAt || new Date().toISOString()
+  };
+}
+function getCcaCustomRecords() {
+  return getActivities().filter(a => a.type === 'CCA' && !String(a.id || '').startsWith('cca-'));
+}
+function setCcaCustomRecords(nextCcaRecords) {
+  const other = getActivities().filter(a => a.type !== 'CCA' || String(a.id || '').startsWith('cca-'));
+  setActivities([...other, ...nextCcaRecords]);
+}
+function deleteAssessment(id) {
+  if (!confirm('Delete this assessment?')) return;
+  setAssessments(getAssessments().filter(a => a.id !== id));
+  renderAll();
+  toast('Assessment deleted');
+}
+function deleteCcaRecord(id) {
+  if (!confirm('Delete this CCA record?')) return;
+  setCcaCustomRecords(getCcaCustomRecords().filter(a => a.id !== id));
+  renderAll();
+  toast('CCA deleted');
+}
+function createRevisionTasksForAssessment(id) {
+  const a = getAssessments().find(x => x.id === id);
+  if (!a) return;
+  const topics = String(a.scope || '').split(/[,;\n]/).map(t => t.trim()).filter(Boolean).slice(0, 6);
+  const planner = getPlanner();
+  const day = DAYS.includes(plannerDayName(0)) ? plannerDayName(0) : 'Monday';
+  const baseTitle = `${a.subject} ${a.type} revision`;
+  planner[day] = planner[day] || [];
+  planner[day].push({ id: v38Id('revplan'), text: `${baseTitle}: ${a.name || a.scope || 'review scope'}`, type: 'Study', done: false });
+  topics.forEach(topic => planner[day].push({ id: v38Id('revtopic'), text: `${a.subject}: revise ${topic}`, type: 'Study', done: false }));
+  setPlanner(planner);
+  toast('Revision tasks created in Weekly Plan');
+  switchSection('planner');
+}
+function parseLooseRows(text = '', mode = 'assessment', fileId = '') {
+  const cleaned = String(text || '').replace(/\r/g, '').trim();
+  if (!cleaned) return [];
+  const lines = cleaned.split(/\n+/).map(l => l.trim()).filter(Boolean).slice(0, 80);
+  const rows = [];
+  lines.forEach(line => {
+    const csv = line.includes(',') ? line.split(',').map(x => x.trim()) : null;
+    const dateMatch = line.match(/(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/]\d{1,2}[-\/]20\d{2}|\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})/i);
+    const timeMatch = line.match(/(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm))/i);
+    if (mode === 'cca') {
+      if (csv && csv.length >= 4) {
+        rows.push(normaliseCca({ day: csv[0], time: `${csv[1]}–${csv[2]}`, title: csv[3], venue: csv[4] || '', notes: csv.slice(5).join(' · '), fileId }));
+      } else {
+        const day = (line.match(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i) || [''])[0];
+        rows.push(normaliseCca({ title: line.replace(dateMatch?.[0] || '', '').trim().slice(0, 80), day, date: dateMatch ? standardiseDate(dateMatch[0]) : '', time: timeMatch ? timeMatch[0] : '', fileId }));
+      }
+    } else {
+      if (csv && csv.length >= 4) {
+        rows.push(normaliseAssessment({ type: csv[0], subject: csv[1], name: csv[2], date: standardiseDate(csv[3]), startTime: csv[4] || '', endTime: csv[5] || '', scope: csv.slice(6).join(' · '), fileId }));
+      } else {
+        const type = (line.match(/\b(WA1|WA2|WA3|WA4|End[- ]?of[- ]?Year|EOY|Mock|Class Test|Diagnostic)\b/i) || ['WA'])[0];
+        const subject = guessSubject(line);
+        rows.push(normaliseAssessment({ type: type.toUpperCase() === 'EOY' ? 'End-of-Year Exam' : type.replace(/end[- ]?of[- ]?year/i, 'End-of-Year Exam'), subject, name: line.slice(0, 90), date: dateMatch ? standardiseDate(dateMatch[0]) : '', startTime: timeMatch ? timeMatch[0] : '', fileId }));
+      }
+    }
+  });
+  return rows.filter(r => mode === 'cca' ? r.title : (r.subject || r.name));
+}
+function standardiseDate(raw = '') {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  const direct = text.match(/^(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if (direct) return `${direct[1]}-${String(direct[2]).padStart(2,'0')}-${String(direct[3]).padStart(2,'0')}`;
+  const sg = text.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](20\d{2})$/);
+  if (sg) return `${sg[3]}-${String(sg[2]).padStart(2,'0')}-${String(sg[1]).padStart(2,'0')}`;
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return inputDateString(parsed);
+  return text;
+}
+function guessSubject(line = '') {
+  const subjects = ['Mathematics','Math','English','Science','Higher Chinese','Chinese','History','Geography','Literature','Art','Music','FCE','MSP'];
+  const found = subjects.find(s => new RegExp(`\\b${s}\\b`, 'i').test(line));
+  if (!found) return 'General';
+  return found === 'Math' ? 'Mathematics' : found;
+}
+async function readUploadText(file) {
+  if (!file) return '';
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith('.csv') || lower.endsWith('.txt')) return await file.text();
+  if (lower.endsWith('.pdf')) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const decoded = new TextDecoder('latin1').decode(buffer);
+      return decoded.replace(/\(([^)]{2,80})\)/g, '\n$1\n').replace(/<([0-9A-Fa-f]{4,})>/g, ' ').replace(/[^\x09\x0A\x0D\x20-\x7E]+/g, ' ');
+    } catch { return ''; }
+  }
+  return '';
+}
+function assessmentTypeOptions(selected = '') {
+  return ASSESSMENT_TYPES.map(t => `<option ${t === selected ? 'selected' : ''}>${t}</option>`).join('');
+}
+function dayOptions(selected = '') {
+  return CCA_DAYS.map(d => `<option ${d === selected ? 'selected' : ''}>${d}</option>`).join('');
+}
+function renderUploadedFiles(category) {
+  const files = getUploadedFiles().filter(f => f.category === category).slice(0, 5);
+  if (!files.length) return '<div class="empty-small">No uploaded files yet.</div>';
+  return files.map(f => `<div class="upload-file-row"><strong>${v38Escape(f.name)}</strong><span>${fileSizeLabel(f.size)} · ${new Date(f.uploadedAt).toLocaleDateString('en-SG')}</span></div>`).join('');
+}
+function renderAssessmentRow(a) {
+  const dateText = a.date ? dueLabel(a.date) : 'No date';
+  const scope = [a.scope, a.weightage ? `Weightage: ${a.weightage}` : '', a.targetScore ? `Target: ${a.targetScore}` : '', a.actualScore ? `Actual: ${a.actualScore}` : ''].filter(Boolean).join(' · ');
+  return `<article class="assessment-row">
+    <div class="date-badge"><strong>${v38Escape((a.date || 'TBC').slice(5,7) || 'TBC')}</strong><small>${v38Escape((a.date || '').slice(8,10))}</small></div>
+    <div class="assessment-main"><div><span class="type-badge important">${v38Escape(a.type)}</span> <strong>${v38Escape(a.subject)}</strong></div><h3>${v38Escape(a.name || a.scope || 'Assessment')}</h3><p>${v38Escape([dateText, a.startTime, a.endTime].filter(Boolean).join(' · '))}</p>${scope ? `<p>${v38Escape(scope)}</p>` : ''}${a.notes ? `<p>${v38Escape(a.notes)}</p>` : ''}</div>
+    <div class="assessment-actions"><span class="mini-badge">${v38Escape(a.status || 'Not started')}</span><button class="text-btn" data-create-revision="${a.id}">Create Revision Tasks</button><button class="text-btn danger" data-delete-assessment="${a.id}">Delete</button></div>
+  </article>`;
+}
+function renderCcaRow(a) {
+  const details = [a.day, a.date ? dueLabel(a.date) : '', a.time, a.venue, a.notes].filter(Boolean).join(' · ');
+  return `<div class="cca-row"><span class="type-badge school">CCA</span><div><strong>${v38Escape(a.title)}</strong><p>${v38Escape(details || 'No time set')}</p></div><button class="text-btn danger" data-delete-cca="${a.id}">Delete</button></div>`;
+}
+function renderParsePreview(mode, rows) {
+  const target = document.getElementById(mode === 'cca' ? 'ccaParsePreview' : 'assessmentParsePreview');
+  if (!target) return;
+  if (!rows.length) { target.innerHTML = '<div class="empty-small">No structured rows detected. Please use the manual entry form below.</div>'; return; }
+  if (mode === 'cca') {
+    target.innerHTML = `<div class="preview-table">${rows.map((r, i) => `<div class="preview-row"><span>${i+1}</span><input data-preview-cca-index="${i}" data-field="title" value="${v38Escape(r.title)}"><input data-preview-cca-index="${i}" data-field="day" value="${v38Escape(r.day || '')}"><input data-preview-cca-index="${i}" data-field="time" value="${v38Escape(r.time || '')}"><input data-preview-cca-index="${i}" data-field="venue" value="${v38Escape(r.venue || '')}"></div>`).join('')}</div><button class="primary-action small" data-save-preview="cca">Confirm & Save CCA Rows</button>`;
+  } else {
+    target.innerHTML = `<div class="preview-table">${rows.map((r, i) => `<div class="preview-row assessment"><span>${i+1}</span><input data-preview-assessment-index="${i}" data-field="type" value="${v38Escape(r.type)}"><input data-preview-assessment-index="${i}" data-field="subject" value="${v38Escape(r.subject)}"><input data-preview-assessment-index="${i}" data-field="name" value="${v38Escape(r.name)}"><input data-preview-assessment-index="${i}" data-field="date" value="${v38Escape(r.date)}"><input data-preview-assessment-index="${i}" data-field="scope" value="${v38Escape(r.scope || '')}"></div>`).join('')}</div><button class="primary-action small" data-save-preview="assessment">Confirm & Save Assessment Rows</button>`;
+  }
+  window.ESHQ_V38_PREVIEW = window.ESHQ_V38_PREVIEW || {};
+  window.ESHQ_V38_PREVIEW[mode] = rows;
+}
+function collectPreviewRows(mode) {
+  const base = (window.ESHQ_V38_PREVIEW && window.ESHQ_V38_PREVIEW[mode]) || [];
+  const rows = base.map(r => ({ ...r }));
+  const selector = mode === 'cca' ? '[data-preview-cca-index]' : '[data-preview-assessment-index]';
+  document.querySelectorAll(selector).forEach(input => {
+    const idx = Number(input.dataset.previewCcaIndex ?? input.dataset.previewAssessmentIndex);
+    const field = input.dataset.field;
+    if (rows[idx]) rows[idx][field] = input.value.trim();
+  });
+  return rows;
+}
+function buildAssessmentPanel() {
+  const custom = getAssessments().slice().sort(assessmentSort);
+  const counts = ASSESSMENT_TYPES.map(t => `${t}: ${custom.filter(a => a.type === t).length}`).join(' · ');
+  return `<section id="assessmentManagementPanel" class="card product-panel">
+    <div class="section-title-row"><div><p class="eyebrow">Parent editable</p><h3>Assessments: WA1 / WA2 / WA3 / EOY</h3><p class="helper-text">Upload school PDF/JPG/PNG as the source file, then confirm or manually enter the assessment details. Nothing overwrites the board until you click save.</p></div></div>
+    <div class="product-grid two-cols">
+      <div class="upload-box"><h4>Upload assessment schedule</h4><input id="assessmentFileInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.txt"><textarea id="assessmentPasteInput" placeholder="Optional: paste text from the school assessment schedule here for faster parsing."></textarea><button id="parseAssessmentUploadBtn" class="secondary-action full-width">Parse / Preview</button><div id="assessmentParsePreview" class="parse-preview"></div></div>
+      <div class="manual-box"><h4>Manual assessment entry</h4><div class="compact-form"><select id="manualAssessmentType">${assessmentTypeOptions('WA1')}</select><input id="manualAssessmentSubject" placeholder="Subject"><input id="manualAssessmentName" placeholder="Assessment name"><input id="manualAssessmentDate" type="date"><input id="manualAssessmentStart" type="time"><input id="manualAssessmentEnd" type="time"><input id="manualAssessmentScope" placeholder="Scope / topics"><input id="manualAssessmentTarget" placeholder="Target score"><button id="saveManualAssessmentBtn" class="primary-action full-width">Save assessment</button></div></div>
+    </div>
+    <div class="upload-history"><h4>Uploaded assessment files</h4>${renderUploadedFiles('assessment')}</div>
+    <div class="assessment-counts">${v38Escape(counts)}</div>
+    <div id="customAssessmentList" class="assessment-list">${custom.length ? custom.map(renderAssessmentRow).join('') : '<div class="empty-state"><h3>No custom assessments yet</h3><p>Add WA1, WA2, WA3, End-of-Year or mock exams here.</p></div>'}</div>
+  </section>`;
+}
+function buildCcaPanel() {
+  const cca = getCcaCustomRecords().slice().sort((a,b)=>(a.day || '').localeCompare(b.day || '') || (a.time || '').localeCompare(b.time || ''));
+  return `<section id="ccaManagementPanel" class="card product-panel">
+    <div class="section-title-row"><div><p class="eyebrow">Parent editable</p><h3>CCA Schedule</h3><p class="helper-text">Upload the school CCA PDF/JPG/PNG as a reference, then confirm detected rows or add the CCA manually.</p></div></div>
+    <div class="product-grid two-cols">
+      <div class="upload-box"><h4>Upload CCA schedule</h4><input id="ccaFileInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.txt"><textarea id="ccaPasteInput" placeholder="Optional: paste CCA text here. Example: Wednesday, 15:00, 17:00, Chinese Orchestra, Music Room"></textarea><button id="parseCcaUploadBtn" class="secondary-action full-width">Parse / Preview</button><div id="ccaParsePreview" class="parse-preview"></div></div>
+      <div class="manual-box"><h4>Manual CCA entry</h4><div class="compact-form"><input id="manualCcaName" placeholder="CCA name"><select id="manualCcaDay">${dayOptions('Wednesday')}</select><input id="manualCcaDate" type="date"><input id="manualCcaStart" type="time"><input id="manualCcaEnd" type="time"><input id="manualCcaLocation" placeholder="Location"><input id="manualCcaCoach" placeholder="Teacher / Coach"><input id="manualCcaTerm" placeholder="Term / date range"><button id="saveManualCcaBtn" class="primary-action full-width">Save CCA</button></div></div>
+    </div>
+    <div class="upload-history"><h4>Uploaded CCA files</h4>${renderUploadedFiles('cca')}</div>
+    <div class="cca-list">${cca.length ? cca.map(renderCcaRow).join('') : '<div class="empty-small">No manually added CCA yet.</div>'}</div>
+  </section>`;
+}
+function injectV38Panels() {
+  const waSection = document.getElementById('wa3');
+  if (waSection) {
+    const h2 = waSection.querySelector('.page-header h2');
+    const eyebrow = waSection.querySelector('.page-header .eyebrow');
+    const muted = waSection.querySelector('.page-header .muted');
+    if (h2) h2.textContent = 'Assessments';
+    if (eyebrow) eyebrow.textContent = 'WA1 · WA2 · WA3 · End-of-Year';
+    if (muted) muted.textContent = 'Track all school assessments, uploaded schedules, revision scope and results.';
+    const existing = document.getElementById('assessmentManagementPanel');
+    const anchor = document.getElementById('wa3TaskList');
+    if (anchor) {
+      if (existing) existing.outerHTML = buildAssessmentPanel();
+      else anchor.insertAdjacentHTML('beforebegin', buildAssessmentPanel());
+    }
+  }
+  const scheduleSection = document.getElementById('timetable');
+  if (scheduleSection) {
+    const afterSchoolCard = document.querySelector('#timetable #activityList')?.closest('.card');
+    if (afterSchoolCard) {
+      const existing = document.getElementById('ccaManagementPanel');
+      if (existing) existing.outerHTML = buildCcaPanel();
+      else afterSchoolCard.insertAdjacentHTML('beforebegin', buildCcaPanel());
+    }
+  }
+  document.querySelectorAll('[data-section="wa3"]').forEach(el => {
+    if (el.matches('button.nav-btn')) el.textContent = 'Assessments';
+    const strong = el.querySelector('strong'); if (strong && strong.textContent.includes('WA3')) strong.textContent = 'Assessments';
+  });
+}
+const v38RenderWa3Board = renderWa3Board;
+renderWa3Board = function() { v38RenderWa3Board(); injectV38Panels(); };
+const v38RenderAll = renderAll;
+renderAll = function() { v38RenderAll(); injectV38Panels(); };
+
+async function handleParseUpload(mode) {
+  const fileInput = document.getElementById(mode === 'cca' ? 'ccaFileInput' : 'assessmentFileInput');
+  const pasteInput = document.getElementById(mode === 'cca' ? 'ccaPasteInput' : 'assessmentPasteInput');
+  const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  const fileRecord = file ? addUploadedFile(file, mode === 'cca' ? 'cca' : 'assessment') : null;
+  let text = pasteInput ? pasteInput.value.trim() : '';
+  if (!text && file) text = await readUploadText(file);
+  const rows = parseLooseRows(text, mode, fileRecord ? fileRecord.id : '');
+  renderParsePreview(mode, rows);
+  if (file && !rows.length && !text) toast('File attached. JPG/PNG and scanned PDFs need manual entry or pasted text.');
+  else if (!rows.length) toast('No rows detected. Please enter manually.');
+  else toast(`${rows.length} row(s) ready for review`);
+  injectV38Panels();
+}
+function savePreviewRows(mode) {
+  const rows = collectPreviewRows(mode);
+  if (!rows.length) { toast('No preview rows to save'); return; }
+  if (mode === 'cca') {
+    const existing = getCcaCustomRecords();
+    setCcaCustomRecords([...existing, ...rows.map(normaliseCca)]);
+    toast('CCA rows saved');
+  } else {
+    setAssessments([...getAssessments(), ...rows.map(normaliseAssessment)]);
+    toast('Assessment rows saved');
+  }
+  renderAll();
+}
+function saveManualAssessment() {
+  const row = normaliseAssessment({
+    type: document.getElementById('manualAssessmentType')?.value || 'WA1',
+    subject: document.getElementById('manualAssessmentSubject')?.value.trim() || 'General',
+    name: document.getElementById('manualAssessmentName')?.value.trim() || '',
+    date: document.getElementById('manualAssessmentDate')?.value || '',
+    startTime: document.getElementById('manualAssessmentStart')?.value || '',
+    endTime: document.getElementById('manualAssessmentEnd')?.value || '',
+    scope: document.getElementById('manualAssessmentScope')?.value.trim() || '',
+    targetScore: document.getElementById('manualAssessmentTarget')?.value.trim() || ''
+  });
+  if (!row.subject && !row.name) { toast('Please add subject or assessment name'); return; }
+  setAssessments([...getAssessments(), row]);
+  renderAll();
+  toast('Assessment saved');
+}
+function saveManualCca() {
+  const name = document.getElementById('manualCcaName')?.value.trim() || '';
+  if (!name) { toast('Please add CCA name'); return; }
+  const row = normaliseCca({
+    title: name,
+    day: document.getElementById('manualCcaDay')?.value || '',
+    date: document.getElementById('manualCcaDate')?.value || '',
+    startTime: document.getElementById('manualCcaStart')?.value || '',
+    endTime: document.getElementById('manualCcaEnd')?.value || '',
+    venue: document.getElementById('manualCcaLocation')?.value.trim() || '',
+    coach: document.getElementById('manualCcaCoach')?.value.trim() || '',
+    term: document.getElementById('manualCcaTerm')?.value.trim() || ''
+  });
+  setCcaCustomRecords([...getCcaCustomRecords(), row]);
+  renderAll();
+  toast('CCA saved');
+}
+document.addEventListener('click', e => {
+  if (e.target.id === 'parseAssessmentUploadBtn') handleParseUpload('assessment');
+  if (e.target.id === 'parseCcaUploadBtn') handleParseUpload('cca');
+  if (e.target.id === 'saveManualAssessmentBtn') saveManualAssessment();
+  if (e.target.id === 'saveManualCcaBtn') saveManualCca();
+  const savePreview = e.target.closest('[data-save-preview]');
+  if (savePreview) savePreviewRows(savePreview.dataset.savePreview);
+  const delAsmt = e.target.closest('[data-delete-assessment]');
+  if (delAsmt) deleteAssessment(delAsmt.dataset.deleteAssessment);
+  const delCca = e.target.closest('[data-delete-cca]');
+  if (delCca) deleteCcaRecord(delCca.dataset.deleteCca);
+  const revisionBtn = e.target.closest('[data-create-revision]');
+  if (revisionBtn) createRevisionTasksForAssessment(revisionBtn.dataset.createRevision);
+});
+document.addEventListener('DOMContentLoaded', () => setTimeout(injectV38Panels, 100));
