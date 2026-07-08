@@ -51,3 +51,4 @@ Friends can click **Create a family trial account** on the login page. Each acco
 ## Security note
 
 This is still an MVP. Passwords are stored in plain text for trial testing only. Before paid customer launch, replace this with proper authentication such as Cloudflare Access, Supabase Auth, Firebase Auth, or a secure password-hashing backend.
+Cloudflare redeploy
