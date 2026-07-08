@@ -1,0 +1,9 @@
+name = "edustation-student-hq"
+pages_build_output_dir = "."
+
+# After creating a Cloudflare D1 database, replace database_id below.
+# The binding name must stay as DB.
+[[d1_databases]]
+binding = "DB"
+database_name = "edustation-student-hq"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

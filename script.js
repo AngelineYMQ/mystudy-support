@@ -3306,24 +3306,91 @@ function eshqSetupLogin() {
   const form = document.getElementById('loginForm');
   const error = document.getElementById('loginError');
   const logoutBtn = document.getElementById('logoutBtn');
+  const trialForm = document.getElementById('trialRegisterForm');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       eshqClearSession();
     });
   }
-  if (form) {
-    form.addEventListener('submit', e => {
+  if (form && !form.dataset.v41Bound) {
+    form.dataset.v41Bound = '1';
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const email = (document.getElementById('loginEmail')?.value || '').trim().toLowerCase();
       const password = document.getElementById('loginPassword')?.value || '';
-      const user = eshqReadUsers().find(u => u.email.toLowerCase() === email && u.password === password);
+      if (error) error.textContent = 'Logging in…';
+      let user = null;
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok && data.user) user = data.user;
+        else if (data.error && error) error.textContent = data.error;
+      } catch (err) {
+        // Local fallback keeps the file usable before Cloudflare D1 is connected.
+      }
       if (!user) {
-        if (error) error.textContent = 'Wrong email or password.';
+        user = eshqReadUsers().find(u => u.email.toLowerCase() === email && u.password === password);
+      }
+      if (!user) {
+        if (error) error.textContent = 'Wrong email or password, or cloud auth is not connected yet.';
         return;
       }
+      if (error) error.textContent = '';
       eshqSetSession(user);
       eshqApplyLoginState();
+      init.started = false;
       init();
+    });
+  }
+  if (trialForm && !trialForm.dataset.v41Bound) {
+    trialForm.dataset.v41Bound = '1';
+    trialForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const out = document.getElementById('trialRegisterError');
+      const payload = {
+        parentName: (document.getElementById('trialParentName')?.value || '').trim(),
+        email: (document.getElementById('trialEmail')?.value || '').trim().toLowerCase(),
+        password: document.getElementById('trialPassword')?.value || '',
+        studentName: (document.getElementById('trialStudentName')?.value || '').trim(),
+        school: (document.getElementById('trialSchool')?.value || '').trim(),
+        className: (document.getElementById('trialClassName')?.value || '').trim()
+      };
+      if (!payload.email || !payload.password || !payload.studentName) {
+        if (out) out.textContent = 'Please enter parent email, password and child name.';
+        return;
+      }
+      if (out) out.textContent = 'Creating account…';
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok || !data.user) throw new Error(data.error || 'Registration failed.');
+        if (out) out.textContent = '';
+        eshqSetSession(data.user);
+        eshqApplyLoginState();
+        init.started = false;
+        init();
+      } catch (err) {
+        // Local fallback for double-click testing without Cloudflare.
+        const slug = 'student_' + payload.email.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 36);
+        const user = { id: 'parent_' + slug, name: payload.parentName || 'Parent', email: payload.email, password: payload.password, role: 'parent', students: [slug] };
+        const users = eshqReadUsers().filter(u => u.email.toLowerCase() !== payload.email);
+        users.push(user);
+        localStorage.setItem(ESHQ_AUTH.userKey, JSON.stringify(users));
+        eshqSetSession(user);
+        save('eshq_v41_student_profile', { studentName: payload.studentName, school: payload.school, className: payload.className, academicYear: '2026' });
+        if (out) out.textContent = 'Cloud registration unavailable. Created a local trial on this browser.';
+        eshqApplyLoginState();
+        init.started = false;
+        init();
+      }
     });
   }
 }
@@ -3426,7 +3493,7 @@ async function initCloudSync() {
     CLOUD_SYNC.ready = true;
     CLOUD_SYNC.lastError = err?.message || String(err);
     console.warn('Cloud sync unavailable; using this browser only.', err);
-    setSyncStatus('Local only', 'warn');
+    setSyncStatus('Browser fallback', 'warn');
   }
 }
 
@@ -6346,3 +6413,169 @@ document.addEventListener('click', e => {
   }
 });
 document.addEventListener('DOMContentLoaded', () => setTimeout(injectV39Panels, 150));
+
+/* v40 polish: clearer storage status + visible file upload feedback for JPG/PNG/PDF.
+   Selecting a file now gives immediate feedback. Image/scanned files are attached as references
+   and the user is prompted to complete the manual entry form because no OCR backend is connected yet. */
+const v40OriginalSetSyncStatus = setSyncStatus;
+setSyncStatus = function(text, mode = 'neutral') {
+  const friendly = text === 'Local only' ? 'Browser fallback' : text;
+  v40OriginalSetSyncStatus(friendly, (text === 'Local only' || text === 'Browser fallback') ? 'warn' : mode);
+  const el = document.getElementById('syncStatusPill');
+  if (el) {
+    if (text === 'Local only' || text === 'Browser fallback') el.title = 'Cloud database is not connected. Data is saved in this browser only until Cloudflare D1 is bound.';
+    if (text === 'Saved to cloud') el.title = 'Saved to the connected cloud database.';
+  }
+};
+
+function v40PreviewTarget(mode) {
+  if (mode === 'cca') return document.getElementById('ccaParsePreview');
+  if (mode === 'assessment') return document.getElementById('assessmentParsePreview');
+  return document.getElementById('timetableParsePreview');
+}
+function v40HistoryPanel(mode) {
+  const category = mode === 'timetable' ? 'timetable' : mode;
+  const panel = mode === 'cca' ? document.getElementById('ccaManagementPanel') : mode === 'assessment' ? document.getElementById('assessmentManagementPanel') : document.getElementById('schoolTimetableUploadPanel');
+  const history = panel?.querySelector('.upload-history');
+  if (history) history.innerHTML = `<h4>Uploaded ${category === 'assessment' ? 'assessment' : category === 'cca' ? 'CCA' : 'timetable'} files</h4>${renderUploadedFiles(category)}`;
+}
+function v40ManualHint(mode, file) {
+  const target = v40PreviewTarget(mode);
+  if (!target || !file) return;
+  const label = mode === 'assessment' ? 'assessment schedule' : mode === 'cca' ? 'CCA schedule' : 'school timetable';
+  target.innerHTML = `<div class="upload-attached-card"><strong>File attached: ${v38Escape(file.name)}</strong><p>This file has been saved as a reference. JPG/PNG and scanned PDFs need OCR, so please fill in the manual ${label} form on the right, or paste the text into the box and click Parse / Preview.</p></div>`;
+}
+
+handleParseUpload = async function(mode) {
+  if (mode === 'timetable') return handleParseTimetableUpload();
+  const fileInput = document.getElementById(mode === 'cca' ? 'ccaFileInput' : 'assessmentFileInput');
+  const pasteInput = document.getElementById(mode === 'cca' ? 'ccaPasteInput' : 'assessmentPasteInput');
+  const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  const fileRecord = file ? addUploadedFile(file, mode === 'cca' ? 'cca' : 'assessment') : null;
+  let text = pasteInput ? pasteInput.value.trim() : '';
+  if (!text && file) text = await readUploadText(file);
+  const rows = parseLooseRows(text, mode, fileRecord ? fileRecord.id : '');
+  if (rows.length) {
+    renderParsePreview(mode, rows);
+    toast(`${rows.length} row(s) ready for review`);
+  } else if (file) {
+    v40ManualHint(mode, file);
+    toast('File attached. Please enter details manually or paste text for parsing.');
+  } else {
+    renderParsePreview(mode, []);
+    toast('No rows detected. Please enter manually.');
+  }
+  v40HistoryPanel(mode);
+};
+
+handleParseTimetableUpload = async function() {
+  const fileInput = document.getElementById('timetableFileInput');
+  const pasteInput = document.getElementById('timetablePasteInput');
+  const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  const fileRecord = file ? addUploadedFile(file, 'timetable') : null;
+  let text = pasteInput ? pasteInput.value.trim() : '';
+  if (!text && file) text = await readUploadText(file);
+  const rows = parseLooseTimetableRows(text, fileRecord ? fileRecord.id : '');
+  if (rows.length) {
+    renderTimetableParsePreview(rows);
+    toast(`${rows.length} timetable row(s) ready for review`);
+  } else if (file) {
+    v40ManualHint('timetable', file);
+    toast('Timetable file attached. Please enter details manually or paste text for parsing.');
+  } else {
+    renderTimetableParsePreview([]);
+    toast('No timetable rows detected. Please enter manually.');
+  }
+  v40HistoryPanel('timetable');
+};
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'ccaFileInput') handleParseUpload('cca');
+  if (e.target.id === 'assessmentFileInput') handleParseUpload('assessment');
+  if (e.target.id === 'timetableFileInput') handleParseUpload('timetable');
+});
+
+
+/* v41 Cloud trial + Settings page */
+LS.studentProfile = 'eshq_v41_student_profile';
+SECTION_ROUTES.settings = '/settings';
+ROUTE_SECTIONS['/settings'] = 'settings';
+SECTION_TITLES.settings = 'Settings';
+
+function getStudentProfile() {
+  const fallbackName = ESHQ_AUTH.activeStudent === 'evans' ? 'Evans' : ((ESHQ_AUTH.activeStudent || 'Student').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  const fallback = { studentName: fallbackName, school: '', className: '', academicYear: '2026' };
+  return { ...fallback, ...(load(LS.studentProfile, {}) || {}) };
+}
+function saveStudentProfile(profile) {
+  save(LS.studentProfile, {
+    studentName: (profile.studentName || '').trim() || 'Student',
+    school: (profile.school || '').trim(),
+    className: (profile.className || '').trim(),
+    academicYear: (profile.academicYear || '').trim()
+  });
+}
+function applyStudentProfile() {
+  const profile = getStudentProfile();
+  const name = profile.studentName || 'Student';
+  const brandTitle = document.querySelector('.topbar .brand-block h1');
+  if (brandTitle) brandTitle.textContent = `${name} Study HQ`;
+  const brandMark = document.querySelector('.topbar .brand-mark');
+  if (brandMark) brandMark.textContent = (name[0] || 'S').toUpperCase();
+  const hero = document.querySelector('.dashboard-hero h2');
+  if (hero) hero.textContent = `Hi ${name} 👋`;
+  const metaParts = [profile.school, profile.className].filter(Boolean);
+  const previewTitle = document.getElementById('settingsPreviewTitle');
+  const previewMeta = document.getElementById('settingsPreviewMeta');
+  if (previewTitle) previewTitle.textContent = `${name} Study HQ`;
+  if (previewMeta) previewMeta.textContent = metaParts.length ? metaParts.join(' · ') : 'School and class not set yet.';
+}
+function renderSettings() {
+  const profile = getStudentProfile();
+  const nameInput = document.getElementById('settingsStudentName');
+  const schoolInput = document.getElementById('settingsSchool');
+  const classInput = document.getElementById('settingsClassName');
+  const yearInput = document.getElementById('settingsAcademicYear');
+  const studentId = document.getElementById('settingsStudentId');
+  if (studentId) studentId.textContent = ESHQ_AUTH.activeStudent || '—';
+  if (nameInput && document.activeElement !== nameInput) nameInput.value = profile.studentName || '';
+  if (schoolInput && document.activeElement !== schoolInput) schoolInput.value = profile.school || '';
+  if (classInput && document.activeElement !== classInput) classInput.value = profile.className || '';
+  if (yearInput && document.activeElement !== yearInput) yearInput.value = profile.academicYear || '';
+  const cloudStatus = document.getElementById('settingsCloudStatus');
+  if (cloudStatus) {
+    cloudStatus.textContent = CLOUD_SYNC.enabled
+      ? 'Cloud database connected. Settings and student data are saved online.'
+      : 'Cloud database not connected yet. This browser is using local fallback.';
+  }
+  applyStudentProfile();
+}
+function bindSettingsEvents() {
+  const btn = document.getElementById('saveStudentProfileBtn');
+  if (btn && !btn.dataset.v41Bound) {
+    btn.dataset.v41Bound = '1';
+    btn.addEventListener('click', () => {
+      saveStudentProfile({
+        studentName: document.getElementById('settingsStudentName')?.value || '',
+        school: document.getElementById('settingsSchool')?.value || '',
+        className: document.getElementById('settingsClassName')?.value || '',
+        academicYear: document.getElementById('settingsAcademicYear')?.value || ''
+      });
+      renderAll();
+      toast('Settings saved for this student');
+    });
+  }
+}
+const v41RenderAllOriginal = renderAll;
+renderAll = function() {
+  v41RenderAllOriginal();
+  renderSettings();
+  bindSettingsEvents();
+};
+const v41UpdateDocumentTitleOriginal = updateDocumentTitle;
+updateDocumentTitle = function(id) {
+  const profile = getStudentProfile();
+  const title = SECTION_TITLES[id] || 'Dashboard';
+  document.title = `${profile.studentName || 'Student'} Study HQ · ${title}`;
+};
+document.addEventListener('DOMContentLoaded', () => setTimeout(() => { bindSettingsEvents(); renderSettings(); }, 250));

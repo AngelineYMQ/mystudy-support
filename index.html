@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evans Study HQ v34 · Month Navigation</title>
+  <title>EduStation Student HQ · Cloud Trial</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=38.0" />
+  <link rel="stylesheet" href="style.css?v=41.0" />
 </head>
 <body>
 
@@ -33,6 +33,25 @@
         <button class="primary-action full-width" type="submit">Login</button>
         <p id="loginError" class="login-error" role="alert"></p>
       </form>
+      <details class="login-help trial-signup-block">
+        <summary>Create a family trial account</summary>
+        <form id="trialRegisterForm" class="login-form compact-register-form">
+          <label>Parent name</label>
+          <input id="trialParentName" type="text" placeholder="e.g. Angeline" />
+          <label>Parent email</label>
+          <input id="trialEmail" type="email" placeholder="parent@example.com" />
+          <label>Password</label>
+          <input id="trialPassword" type="password" placeholder="Create password" />
+          <label>Child name</label>
+          <input id="trialStudentName" type="text" placeholder="e.g. Evans" />
+          <label>School</label>
+          <input id="trialSchool" type="text" placeholder="e.g. Nan Chiau High School" />
+          <label>Class</label>
+          <input id="trialClassName" type="text" placeholder="e.g. Sec 1A" />
+          <button class="secondary-action full-width" type="submit">Create Trial</button>
+          <p id="trialRegisterError" class="login-error" role="alert"></p>
+        </form>
+      </details>
       <details class="login-help">
         <summary>Test accounts</summary>
         <p><strong>Admin</strong><br>admin@edustation.com.sg / admin123</p>
@@ -59,6 +78,7 @@
         <button class="nav-btn" data-section="planner">Weekly Plan</button>
         <button class="nav-btn" data-section="revision">Revision Lab</button>
         <button class="nav-btn" data-section="progress">Progress</button>
+        <button class="nav-btn" data-section="settings">Settings</button>
       </nav>
       <div class="header-tools">
         <div id="syncStatusPill" class="sync-pill" data-mode="neutral">Syncing…</div>
@@ -492,6 +512,49 @@
     </div>
   </div>
 
+
+      <section id="settings" class="section">
+        <div class="page-heading-row">
+          <div>
+            <p class="eyebrow">Student profile</p>
+            <h2>Settings</h2>
+            <p class="muted">Parents can update the child’s name, school and class here. The Study HQ header and dashboard will update for this student only.</p>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <article class="card settings-card">
+            <div class="card-heading-row">
+              <div>
+                <p class="eyebrow">Child details</p>
+                <h3>Student Profile</h3>
+              </div>
+              <span class="mini-badge" id="settingsStudentId">—</span>
+            </div>
+            <div class="settings-form">
+              <label>Child name</label>
+              <input id="settingsStudentName" type="text" placeholder="e.g. Evans" />
+              <label>School</label>
+              <input id="settingsSchool" type="text" placeholder="e.g. Nan Chiau High School" />
+              <label>Class</label>
+              <input id="settingsClassName" type="text" placeholder="e.g. Sec 1A" />
+              <label>Academic year</label>
+              <input id="settingsAcademicYear" type="text" placeholder="e.g. 2026" />
+              <button id="saveStudentProfileBtn" class="primary-action full-width" type="button">Save Settings</button>
+            </div>
+          </article>
+          <article class="card settings-card">
+            <p class="eyebrow">Cloud status</p>
+            <h3>Storage</h3>
+            <p class="helper-text" id="settingsCloudStatus">Checking cloud connection…</p>
+            <div class="profile-preview-card">
+              <strong id="settingsPreviewTitle">Evans Study HQ</strong>
+              <span id="settingsPreviewMeta">School and class will appear here.</span>
+            </div>
+            <p class="helper-text">When Cloudflare D1 is connected, these settings are saved to the cloud and can be opened from another device after login.</p>
+          </article>
+        </div>
+      </section>
+
   <div id="homeworkModal" class="modal" aria-hidden="true">
     <div class="modal-card">
       <div class="section-title-row">
@@ -548,6 +611,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=39.0"></script>
+  <script src="script.js?v=41.0"></script>
 </body>
 </html>
