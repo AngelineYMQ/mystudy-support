@@ -3,14 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EduStation Student HQ · Client Login</title>
+  <title>Evans Study HQ v34 · Month Navigation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=35.0" />
+  <link rel="stylesheet" href="style.css?v=36.0" />
 </head>
 <body>
-  <div class="app-shell">
+
+  <div id="loginScreen" class="login-screen" aria-label="Study HQ Login">
+    <div class="login-card">
+      <div class="brand-block login-brand">
+        <div class="brand-mark">E</div>
+        <div>
+          <h1>EduStation Student HQ</h1>
+          <p>Secure student access</p>
+        </div>
+      </div>
+      <div class="login-copy">
+        <p class="eyebrow">Login required</p>
+        <h2>Open your Study HQ</h2>
+        <p class="muted">After login, the Study HQ page stays exactly the same as the original Evans version. The login only separates each student’s saved data.</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label>Email</label>
+        <input id="loginEmail" type="email" autocomplete="username" placeholder="admin@edustation.com.sg" required />
+        <label>Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required />
+        <button class="primary-action full-width" type="submit">Login</button>
+        <p id="loginError" class="login-error" role="alert"></p>
+      </form>
+      <details class="login-help">
+        <summary>Test accounts</summary>
+        <p><strong>Admin</strong><br>admin@edustation.com.sg / admin123</p>
+        <p><strong>Evans parent</strong><br>parent.evans@example.com / parent123</p>
+        <p><strong>Evans student</strong><br>evans@student.local / student123</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="app-shell auth-hidden" id="appShell">
     <header class="topbar">
       <div class="brand-block">
         <div class="brand-mark">E</div>
@@ -30,24 +62,13 @@
       </nav>
       <div class="header-tools">
         <div id="syncStatusPill" class="sync-pill" data-mode="neutral">Syncing…</div>
+        <button id="logoutBtn" class="logout-btn" type="button" title="Logout">Logout</button>
         <div class="language-switch" aria-label="Language switch">
           <button id="langEnBtn" class="lang-btn active" type="button">EN</button>
           <button id="langZhBtn" class="lang-btn" type="button">中文</button>
         </div>
       </div>
     </header>
-    <div id="accountBar" class="account-bar" hidden>
-      <div class="account-left">
-        <span class="account-chip" id="roleChip">Role</span>
-        <label class="student-switch-label" for="studentSwitcher">Student</label>
-        <select id="studentSwitcher" class="student-switcher"></select>
-        <span class="account-hint" id="accountHint">Data is separated by student account.</span>
-      </div>
-      <div class="account-actions">
-        <button id="manageAccountsBtn" class="text-btn" type="button">Admin Console</button>
-        <button id="logoutBtn" class="secondary-action" type="button">Log out</button>
-      </div>
-    </div>
 
     <main>
       <section id="dashboard" class="section active-section">
@@ -526,74 +547,7 @@
     </div>
   </div>
 
-
-  <div id="loginOverlay" class="login-overlay" aria-modal="true" role="dialog">
-    <div class="login-card">
-      <div class="login-brand">
-        <div class="brand-mark">E</div>
-        <div>
-          <h2>EduStation Student HQ</h2>
-          <p>Secure client access · Study dashboard</p>
-        </div>
-      </div>
-      <label>Email</label>
-      <input id="loginEmail" type="email" autocomplete="username" placeholder="admin@edustation.com.sg" />
-      <label>Password</label>
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
-      <button id="loginBtn" class="primary-action full-width" type="button">Log in</button>
-      <p id="loginError" class="login-error"></p>
-      <div class="demo-logins">
-        <strong>Built-in test accounts</strong>
-        <button type="button" data-fill-login="admin@edustation.com.sg|admin123">Admin</button>
-        <button type="button" data-fill-login="parent.evans@example.com|parent123">Evans Parent</button>
-        <button type="button" data-fill-login="evans@student.local|student123">Evans Student</button>
-        <button type="button" data-fill-login="teacher@edustation.com.sg|teacher123">Teacher</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="adminConsole" class="admin-console" aria-hidden="true">
-    <div class="admin-card">
-      <div class="section-title-row">
-        <div>
-          <p class="eyebrow">EduStation Admin</p>
-          <h3>Client Accounts</h3>
-        </div>
-        <button id="closeAdminConsole" class="icon-btn" aria-label="Close">×</button>
-      </div>
-      <div class="admin-grid">
-        <section>
-          <h4>Add Student</h4>
-          <input id="newStudentName" placeholder="Student name" />
-          <input id="newStudentSchool" placeholder="School / Programme" />
-          <input id="newStudentGrade" placeholder="Grade / Level" />
-          <input id="newStudentTarget" placeholder="Target exam / goal" />
-          <button id="addStudentBtn" class="primary-action full-width" type="button">Create student space</button>
-        </section>
-        <section>
-          <h4>Add User</h4>
-          <input id="newUserName" placeholder="User name" />
-          <input id="newUserEmail" placeholder="Email" />
-          <input id="newUserPassword" placeholder="Temporary password" />
-          <select id="newUserRole">
-            <option value="parent">Parent</option>
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-            <option value="consultant">Consultant</option>
-            <option value="admin">Admin</option>
-          </select>
-          <select id="newUserStudent"></select>
-          <button id="addUserBtn" class="primary-action full-width" type="button">Create user</button>
-        </section>
-      </div>
-      <div id="adminLists" class="admin-lists"></div>
-      <p class="helper-text">This version preserves the original Evans Study HQ interface. Each student has separate saved homework, check-ins, notes, plans and progress through student-scoped storage.</p>
-    </div>
-  </div>
-
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="auth-guard.js?v=35.0"></script>
-  <script src="script.js?v=35.0"></script>
-  <script src="auth-ui.js?v=35.0"></script>
+  <script src="script.js?v=36.0"></script>
 </body>
 </html>

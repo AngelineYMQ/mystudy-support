@@ -3237,6 +3237,97 @@ const QUESTION_BANK = {
   }
 };
 
+
+/* v36 Multi-user login gate. This only controls access and data separation.
+   After login the original Evans Study HQ interface is shown unchanged. */
+const ESHQ_AUTH = {
+  sessionKey: 'eshq_v36_session',
+  userKey: 'eshq_v36_users',
+  currentUser: null,
+  activeStudent: 'evans'
+};
+const ESHQ_DEFAULT_USERS = [
+  { id: 'admin', name: 'EduStation Admin', email: 'admin@edustation.com.sg', password: 'admin123', role: 'admin', students: ['evans','sophie','ryan'] },
+  { id: 'parent-evans', name: 'Evans Parent', email: 'parent.evans@example.com', password: 'parent123', role: 'parent', students: ['evans'] },
+  { id: 'student-evans', name: 'Evans', email: 'evans@student.local', password: 'student123', role: 'student', students: ['evans'] },
+  { id: 'teacher', name: 'Teacher', email: 'teacher@edustation.com.sg', password: 'teacher123', role: 'teacher', students: ['evans','sophie'] }
+];
+function eshqReadUsers() {
+  try {
+    const existing = JSON.parse(localStorage.getItem(ESHQ_AUTH.userKey));
+    if (Array.isArray(existing) && existing.length) return existing;
+  } catch {}
+  localStorage.setItem(ESHQ_AUTH.userKey, JSON.stringify(ESHQ_DEFAULT_USERS));
+  return ESHQ_DEFAULT_USERS;
+}
+function eshqReadSession() {
+  try { return JSON.parse(localStorage.getItem(ESHQ_AUTH.sessionKey)); } catch { return null; }
+}
+function eshqSetSession(user) {
+  ESHQ_AUTH.currentUser = user;
+  ESHQ_AUTH.activeStudent = (user.students && user.students[0]) || 'evans';
+  localStorage.setItem(ESHQ_AUTH.sessionKey, JSON.stringify({ userId: user.id, activeStudent: ESHQ_AUTH.activeStudent }));
+  if (typeof CLOUD_SYNC !== 'undefined') CLOUD_SYNC.student = ESHQ_AUTH.activeStudent;
+}
+function eshqClearSession() {
+  localStorage.removeItem(ESHQ_AUTH.sessionKey);
+  location.reload();
+}
+function eshqStorageKey(key) {
+  const student = ESHQ_AUTH.activeStudent || 'evans';
+  // Keep Evans on the original v34 keys so the page state remains exactly the same when upgrading.
+  if (student === 'evans') return key;
+  return `eshq_v36_${student}_${key}`;
+}
+function eshqApplyLoginState() {
+  const app = document.getElementById('appShell');
+  const login = document.getElementById('loginScreen');
+  if (ESHQ_AUTH.currentUser) {
+    if (login) login.classList.add('auth-hidden');
+    if (app) app.classList.remove('auth-hidden');
+  } else {
+    if (login) login.classList.remove('auth-hidden');
+    if (app) app.classList.add('auth-hidden');
+  }
+}
+function eshqTryRestoreSession() {
+  const session = eshqReadSession();
+  if (!session) return false;
+  const users = eshqReadUsers();
+  const user = users.find(u => u.id === session.userId);
+  if (!user) return false;
+  ESHQ_AUTH.currentUser = user;
+  ESHQ_AUTH.activeStudent = (user.students && user.students.includes(session.activeStudent)) ? session.activeStudent : ((user.students && user.students[0]) || 'evans');
+  if (typeof CLOUD_SYNC !== 'undefined') CLOUD_SYNC.student = ESHQ_AUTH.activeStudent;
+  return true;
+}
+function eshqSetupLogin() {
+  eshqReadUsers();
+  const form = document.getElementById('loginForm');
+  const error = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      eshqClearSession();
+    });
+  }
+  if (form) {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const email = (document.getElementById('loginEmail')?.value || '').trim().toLowerCase();
+      const password = document.getElementById('loginPassword')?.value || '';
+      const user = eshqReadUsers().find(u => u.email.toLowerCase() === email && u.password === password);
+      if (!user) {
+        if (error) error.textContent = 'Wrong email or password.';
+        return;
+      }
+      eshqSetSession(user);
+      eshqApplyLoginState();
+      init();
+    });
+  }
+}
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const LS = {
   wa3Done: 'eshq_v2_wa3_done',
@@ -3272,7 +3363,7 @@ const CLOUD_SYNC = {
 };
 
 function cloudKeys() {
-  return Array.from(new Set(Object.values(LS).filter(Boolean)));
+  return Array.from(new Set(Object.values(LS).filter(Boolean).map(eshqStorageKey)));
 }
 
 function setSyncStatus(text, mode = 'neutral') {
@@ -3361,16 +3452,18 @@ async function cloudSave(key, value) {
 }
 
 function load(key, fallback) {
-  if (CLOUD_SYNC.ready && Object.prototype.hasOwnProperty.call(CLOUD_SYNC.state, key)) {
-    return CLOUD_SYNC.state[key] ?? fallback;
+  const scopedKey = eshqStorageKey(key);
+  if (CLOUD_SYNC.ready && Object.prototype.hasOwnProperty.call(CLOUD_SYNC.state, scopedKey)) {
+    return CLOUD_SYNC.state[scopedKey] ?? fallback;
   }
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+  try { return JSON.parse(localStorage.getItem(scopedKey)) ?? fallback; } catch { return fallback; }
 }
 function save(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  const scopedKey = eshqStorageKey(key);
+  try { localStorage.setItem(scopedKey, JSON.stringify(value)); } catch {}
   if (CLOUD_SYNC.ready) {
-    CLOUD_SYNC.state[key] = value;
-    cloudSave(key, value);
+    CLOUD_SYNC.state[scopedKey] = value;
+    cloudSave(scopedKey, value);
   }
 }
 function getSingaporeDateParts(date = new Date()) {
@@ -5361,6 +5454,8 @@ function setupExtraEvents() {
   });
 }
 async function init() {
+  if (init.started) return;
+  init.started = true;
   setupEvents();
   setupExtraEvents();
   window.addEventListener('popstate', () => routeToCurrentUrl());
@@ -5374,7 +5469,15 @@ async function init() {
     if (!document.hidden) refreshFromCloud(true);
   });
 }
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  eshqSetupLogin();
+  if (eshqTryRestoreSession()) {
+    eshqApplyLoginState();
+    init();
+  } else {
+    eshqApplyLoginState();
+  }
+});
 
 
 /* v8 Daily streak - Duolingo-style habit check */
@@ -5636,4 +5739,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (enBtn) enBtn.addEventListener('click', () => { setLang('en'); toast('Language set to English'); });
   if (zhBtn) zhBtn.addEventListener('click', () => { setLang('zh'); toast('语言已切换为中文'); });
   applyLanguage();
+});
+
+
+// Keyboard shortcut is kept as a fallback, but the visible Logout button is the normal way to sign out.
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') eshqClearSession();
 });

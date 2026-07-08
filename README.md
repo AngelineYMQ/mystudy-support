@@ -1,45 +1,35 @@
-# EduStation Student HQ v35 — Preserved Evans Interface + Client Login
+# EduStation Student HQ v36 — Login Preserves Original Evans UI
 
-This package keeps the original Evans Study HQ v34 interface, navigation, cards, timetable and study workflow, but adds a client-account layer for selling the product to multiple families.
+This version is based directly on `evans-study-hq-v34-month-navigation.zip`.
 
-## How to open
+## What changed
 
-Unzip the package and double-click `index.html`.
+- Added a visible Logout button in the original topbar. Login still only acts as a gate; after login the Evans v34 page remains the main experience.
+
+- Added a login screen before the Study HQ.
+- After login, the app opens into the original Evans Study HQ page.
+- The post-login Dashboard, navigation, cards, colors and workflow are preserved.
+- Student data is separated behind the scenes by the logged-in student account.
+- Evans keeps the original v34 localStorage keys so existing Evans state is preserved.
 
 ## Test accounts
 
-- Admin: `admin@edustation.com.sg` / `admin123`
-- Evans Parent: `parent.evans@example.com` / `parent123`
-- Evans Student: `evans@student.local` / `student123`
-- Teacher: `teacher@edustation.com.sg` / `teacher123`
+Admin: `admin@edustation.com.sg` / `admin123`
 
-## What changed from the original Evans ZIP
+Evans parent: `parent.evans@example.com` / `parent123`
 
-- Preserved original UI, tabs and layout.
-- Added login page.
-- Added role-based access model.
-- Added Admin Console.
-- Added student switcher for Admin / Teacher.
-- Added multiple student spaces.
-- Added student-scoped storage: homework, check-ins, planner, notes and progress are separated per student.
-- Replaced visible student name in the header dynamically.
+Evans student: `evans@student.local` / `student123`
 
-## Important production note
+Teacher: `teacher@edustation.com.sg` / `teacher123`
 
-This is still a front-end MVP. It is enough to test the product flow and show clients, but real paid customer use needs a server-side backend, encrypted authentication and a real database.
+## Open
 
-Recommended production stack:
+Unzip the folder and open `index.html` in a browser.
 
-- Cloudflare Pages for frontend
-- Cloudflare Workers for API
-- Cloudflare D1 or Supabase/Postgres for database
-- Auth.js / Clerk / Supabase Auth for secure login
+## Logout
 
-## Files
+To keep the Evans interface exactly unchanged after login, there is no visible logout button in the header. Use `the visible Logout button, or Ctrl + Shift + L` to log out during testing.
 
-- `index.html` — original interface + login/admin modals
-- `style.css` — original style + account layer CSS
-- `script.js` — original Evans Study HQ logic
-- `auth-guard.js` — storage scoping and auth seed data
-- `auth-ui.js` — login, logout, admin console and student switcher
-- `schema.sql` — original database schema reference
+## Important
+
+This is still a front-end/localStorage implementation. It is good for product testing and GitHub Pages preview. Before selling to real customers, connect proper backend authentication and database storage.
