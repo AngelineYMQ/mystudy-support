@@ -6097,3 +6097,252 @@ document.addEventListener('click', e => {
   if (revisionBtn) createRevisionTasksForAssessment(revisionBtn.dataset.createRevision);
 });
 document.addEventListener('DOMContentLoaded', () => setTimeout(injectV38Panels, 100));
+
+/* v39 fix: add clear School Timetable upload/manual entry inside Schedule.
+   This keeps the original Evans v34 UI and uses the same scoped storage per logged-in student. */
+LS.schoolTimetable = 'eshq_v39_school_timetable';
+
+function getSchoolTimetable() {
+  const custom = load(LS.schoolTimetable, null);
+  return custom && typeof custom === 'object' && Object.keys(custom).length ? custom : TIMETABLE;
+}
+function setSchoolTimetable(value) { save(LS.schoolTimetable, value); }
+function resetSchoolTimetable() { save(LS.schoolTimetable, null); }
+function normaliseTimetableRow(row = {}) {
+  const day = row.day || row.cycleDay || row.Day || 'Day 1';
+  const startTime = row.startTime || row.start || row['Start Time'] || '';
+  const endTime = row.endTime || row.end || row['End Time'] || '';
+  return {
+    id: row.id || v38Id('tt'),
+    day,
+    time: row.time || [startTime, endTime].filter(Boolean).join('–'),
+    subject: row.subject || row.Subject || row.title || '',
+    teacher: row.teacher || row.Teacher || '',
+    venue: row.venue || row.location || row.Location || row.room || '',
+    notes: row.notes || row.Notes || '',
+    fileId: row.fileId || ''
+  };
+}
+function getCustomTimetableRows() {
+  const table = load(LS.schoolTimetable, null);
+  if (!table || typeof table !== 'object') return [];
+  return TIMETABLE_DAYS.flatMap(day => (table[day] || []).map(row => ({ ...row, day })));
+}
+function timetableRowsToObject(rows = []) {
+  const table = {};
+  TIMETABLE_DAYS.forEach(day => { table[day] = []; });
+  rows.map(normaliseTimetableRow).forEach(row => {
+    const day = TIMETABLE_DAYS.includes(row.day) ? row.day : 'Day 1';
+    table[day].push({ time: row.time, subject: row.subject, teacher: row.teacher, venue: row.venue, notes: row.notes, id: row.id, fileId: row.fileId });
+  });
+  TIMETABLE_DAYS.forEach(day => table[day].sort((a,b) => timeStartMinutes(a.time) - timeStartMinutes(b.time)));
+  return table;
+}
+function parseLooseTimetableRows(text = '', fileId = '') {
+  const cleaned = String(text || '').replace(/\r/g, '').trim();
+  if (!cleaned) return [];
+  const lines = cleaned.split(/\n+/).map(l => l.trim()).filter(Boolean).slice(0, 150);
+  const rows = [];
+  lines.forEach(line => {
+    if (/^day\s*,/i.test(line) || /^cycle\s*day/i.test(line)) return;
+    const csv = line.includes(',') ? line.split(',').map(x => x.trim()) : null;
+    if (csv && csv.length >= 4) {
+      const first = csv[0].match(/Day\s*\d+/i) ? csv[0].replace(/day/i, 'Day') : csv[0];
+      const day = TIMETABLE_DAYS.includes(first) ? first : 'Day 1';
+      let time = '';
+      let subject = '';
+      let teacher = '';
+      let venue = '';
+      if (/\d{1,2}:?\d{0,2}/.test(csv[1]) && /\d{1,2}:?\d{0,2}/.test(csv[2])) {
+        time = `${csv[1]}–${csv[2]}`;
+        subject = csv[3] || '';
+        teacher = csv[4] || '';
+        venue = csv[5] || '';
+      } else {
+        time = csv[1] || '';
+        subject = csv[2] || '';
+        teacher = csv[3] || '';
+        venue = csv[4] || '';
+      }
+      rows.push(normaliseTimetableRow({ day, time, subject, teacher, venue, notes: csv.slice(6).join(' · '), fileId }));
+      return;
+    }
+    const dayMatch = line.match(/\bDay\s*(10|[1-9])\b/i);
+    const timeMatch = line.match(/(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)?)\s*[–\-to]+\s*(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)?)/i);
+    const day = dayMatch ? `Day ${dayMatch[1]}` : 'Day 1';
+    const time = timeMatch ? timeMatch[0].replace(/\s+to\s+/i, '–') : '';
+    const subject = line.replace(dayMatch?.[0] || '', '').replace(timeMatch?.[0] || '', '').trim().slice(0, 80);
+    if (subject || time) rows.push(normaliseTimetableRow({ day, time, subject, fileId }));
+  });
+  return rows.filter(r => r.subject || r.time);
+}
+function timetableDayOptions(selected = 'Day 1') {
+  return TIMETABLE_DAYS.map(day => `<option ${day === selected ? 'selected' : ''}>${day}</option>`).join('');
+}
+function renderTimetableRow(r) {
+  return `<article class="assessment-row"><div class="date-badge"><strong>${v38Escape(String(r.day || '').replace('Day ', 'D'))}</strong><small></small></div><div class="assessment-main"><div><span class="type-badge">School</span> <strong>${v38Escape(r.subject || 'Class')}</strong></div><p>${v38Escape([r.time, r.teacher, r.venue].filter(Boolean).join(' · '))}</p>${r.notes ? `<p>${v38Escape(r.notes)}</p>` : ''}</div></article>`;
+}
+function buildTimetableUploadPanel() {
+  const customRows = getCustomTimetableRows();
+  const usingCustom = customRows.length > 0;
+  return `<section id="schoolTimetableUploadPanel" class="card product-panel">
+    <div class="section-title-row"><div><p class="eyebrow">Parent editable</p><h3>School Timetable</h3><p class="helper-text">Upload the school timetable PDF/JPG/PNG as a reference, or paste/enter the timetable manually. Confirmed rows replace the school timetable for this student only.</p></div><button id="resetTimetableBtn" class="text-btn danger" type="button">Reset to Evans original</button></div>
+    <div class="product-grid two-cols">
+      <div class="upload-box"><h4>Upload school timetable</h4><input id="timetableFileInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.txt"><textarea id="timetablePasteInput" placeholder="Optional: paste timetable text or CSV here. CSV example: Day 1, 08:00, 08:40, Mathematics, Mr Tan, Room 101"></textarea><button id="parseTimetableUploadBtn" class="secondary-action full-width">Parse / Preview</button><div id="timetableParsePreview" class="parse-preview"></div></div>
+      <div class="manual-box"><h4>Manual timetable entry</h4><div class="compact-form"><select id="manualTimetableDay">${timetableDayOptions('Day 1')}</select><input id="manualTimetableStart" type="time"><input id="manualTimetableEnd" type="time"><input id="manualTimetableSubject" placeholder="Subject / class"><input id="manualTimetableTeacher" placeholder="Teacher"><input id="manualTimetableVenue" placeholder="Room / venue"><button id="saveManualTimetableBtn" class="primary-action full-width">Save timetable row</button></div></div>
+    </div>
+    <div class="upload-history"><h4>Uploaded timetable files</h4>${renderUploadedFiles('timetable')}</div>
+    <div class="assessment-counts">${usingCustom ? `Custom timetable active · ${customRows.length} row(s)` : 'Using original Evans timetable'}</div>
+    <div class="assessment-list">${usingCustom ? customRows.slice(0, 30).map(renderTimetableRow).join('') : '<div class="empty-small">No custom school timetable yet. Upload or add rows manually when setting up a new student.</div>'}</div>
+  </section>`;
+}
+function renderTimetableParsePreview(rows) {
+  const target = document.getElementById('timetableParsePreview');
+  if (!target) return;
+  if (!rows.length) { target.innerHTML = '<div class="empty-small">No structured timetable rows detected. Please use manual entry or paste clearer text/CSV.</div>'; return; }
+  target.innerHTML = `<div class="preview-table">${rows.map((r, i) => `<div class="preview-row assessment"><span>${i+1}</span><input data-preview-timetable-index="${i}" data-field="day" value="${v38Escape(r.day || 'Day 1')}"><input data-preview-timetable-index="${i}" data-field="time" value="${v38Escape(r.time || '')}"><input data-preview-timetable-index="${i}" data-field="subject" value="${v38Escape(r.subject || '')}"><input data-preview-timetable-index="${i}" data-field="teacher" value="${v38Escape(r.teacher || '')}"><input data-preview-timetable-index="${i}" data-field="venue" value="${v38Escape(r.venue || '')}"></div>`).join('')}</div><button class="primary-action small" data-save-preview="timetable">Confirm & Replace School Timetable</button>`;
+  window.ESHQ_V38_PREVIEW = window.ESHQ_V38_PREVIEW || {};
+  window.ESHQ_V38_PREVIEW.timetable = rows;
+}
+function collectTimetablePreviewRows() {
+  const base = (window.ESHQ_V38_PREVIEW && window.ESHQ_V38_PREVIEW.timetable) || [];
+  const rows = base.map(r => ({ ...r }));
+  document.querySelectorAll('[data-preview-timetable-index]').forEach(input => {
+    const idx = Number(input.dataset.previewTimetableIndex);
+    const field = input.dataset.field;
+    if (rows[idx]) rows[idx][field] = input.value.trim();
+  });
+  return rows.map(normaliseTimetableRow).filter(r => r.subject || r.time);
+}
+async function handleParseTimetableUpload() {
+  const fileInput = document.getElementById('timetableFileInput');
+  const pasteInput = document.getElementById('timetablePasteInput');
+  const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  const fileRecord = file ? addUploadedFile(file, 'timetable') : null;
+  let text = pasteInput ? pasteInput.value.trim() : '';
+  if (!text && file) text = await readUploadText(file);
+  const rows = parseLooseTimetableRows(text, fileRecord ? fileRecord.id : '');
+  renderTimetableParsePreview(rows);
+  if (file && !rows.length && !text) toast('Timetable file attached. JPG/PNG and scanned PDFs need manual entry or pasted text.');
+  else if (!rows.length) toast('No timetable rows detected. Please enter manually.');
+  else toast(`${rows.length} timetable row(s) ready for review`);
+}
+function saveTimetablePreviewRows() {
+  const rows = collectTimetablePreviewRows();
+  if (!rows.length) { toast('No timetable rows to save'); return; }
+  setSchoolTimetable(timetableRowsToObject(rows));
+  renderAll();
+  toast('School timetable replaced for this student');
+}
+function saveManualTimetableRow() {
+  const subject = document.getElementById('manualTimetableSubject')?.value.trim() || '';
+  const start = document.getElementById('manualTimetableStart')?.value || '';
+  const end = document.getElementById('manualTimetableEnd')?.value || '';
+  if (!subject && !start) { toast('Please add subject or time'); return; }
+  const rows = getCustomTimetableRows();
+  rows.push(normaliseTimetableRow({
+    day: document.getElementById('manualTimetableDay')?.value || 'Day 1',
+    startTime: start,
+    endTime: end,
+    subject,
+    teacher: document.getElementById('manualTimetableTeacher')?.value.trim() || '',
+    venue: document.getElementById('manualTimetableVenue')?.value.trim() || ''
+  }));
+  setSchoolTimetable(timetableRowsToObject(rows));
+  renderAll();
+  toast('Timetable row saved');
+}
+function injectV39Panels() {
+  const scheduleSection = document.getElementById('timetable');
+  if (!scheduleSection) return;
+  const schoolTimetableCard = document.querySelector('#timetable #fullTimetableGrid')?.closest('.card');
+  if (schoolTimetableCard) {
+    const existing = document.getElementById('schoolTimetableUploadPanel');
+    if (existing) existing.outerHTML = buildTimetableUploadPanel();
+    else schoolTimetableCard.insertAdjacentHTML('beforebegin', buildTimetableUploadPanel());
+  }
+}
+
+// Patch upload handling so preview stays visible instead of being wiped by panel re-injection.
+handleParseUpload = async function(mode) {
+  if (mode === 'timetable') return handleParseTimetableUpload();
+  const fileInput = document.getElementById(mode === 'cca' ? 'ccaFileInput' : 'assessmentFileInput');
+  const pasteInput = document.getElementById(mode === 'cca' ? 'ccaPasteInput' : 'assessmentPasteInput');
+  const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  const fileRecord = file ? addUploadedFile(file, mode === 'cca' ? 'cca' : 'assessment') : null;
+  let text = pasteInput ? pasteInput.value.trim() : '';
+  if (!text && file) text = await readUploadText(file);
+  const rows = parseLooseRows(text, mode, fileRecord ? fileRecord.id : '');
+  renderParsePreview(mode, rows);
+  if (file && !rows.length && !text) toast('File attached. JPG/PNG and scanned PDFs need manual entry or pasted text.');
+  else if (!rows.length) toast('No rows detected. Please enter manually.');
+  else toast(`${rows.length} row(s) ready for review`);
+};
+const v39SavePreviewRowsOriginal = savePreviewRows;
+savePreviewRows = function(mode) {
+  if (mode === 'timetable') return saveTimetablePreviewRows();
+  return v39SavePreviewRowsOriginal(mode);
+};
+
+// Make all timetable displays use the custom timetable when a family uploads or enters one.
+classesForDayWithDate = function(day, dateStr = '') {
+  const table = getSchoolTimetable();
+  const base = [...(table[day] || [])];
+  const activityRows = dateStr ? activityRowsForDate(dateStr) : [];
+  if (dateStr && !isSchoolDay(parseLocalDate(dateStr))) {
+    return activityRows.sort((a, b) => timeStartMinutes(a.time) - timeStartMinutes(b.time));
+  }
+  return [...base, ...activityRows].sort((a, b) => timeStartMinutes(a.time) - timeStartMinutes(b.time));
+};
+renderTimetable = function() {
+  const selector = document.getElementById('cycleDaySelect');
+  if (!selector) return;
+  const table = getSchoolTimetable();
+  const selected = getSelectedCycleDay();
+  selector.innerHTML = TIMETABLE_DAYS.map(day => `<option value="${day}">${day}</option>`).join('');
+  selector.value = selected;
+  const todayStr = inputDateString(todayDate());
+  const dateForSelected = selected === getAutoCycleDay() ? todayStr : '';
+  const classes = classesForDayWithDate(selected, dateForSelected);
+  const nextDate = nextSchoolDate(todayDate());
+  const nextDay = getAutoCycleDay(nextDate);
+  const nextDateStr = inputDateString(nextDate);
+  const isWeekendView = dateForSelected && !isSchoolDay(parseLocalDate(dateForSelected));
+  document.getElementById('selectedCycleTitle').textContent = isWeekendView ? 'Weekend Schedule' : `${selected} Classes`;
+  const info = document.getElementById('cycleInfo');
+  if (info) info.textContent = isCycleManualOverride() ? `Manual override is on. Auto today would be ${getAutoCycleDay()} using Singapore time.` : `Auto today: ${getAutoCycleDay()} · Singapore time · Anchor: 7 Jul 2026 = Day 7.`;
+  document.getElementById('selectedClassCount').textContent = isWeekendView ? `${classes.length} activities` : `${classes.filter(c => !['Lunch', 'Recess'].includes(c.subject)).length} classes`;
+  document.getElementById('selectedDayClasses').innerHTML = classes.map(classRow).join('');
+  document.getElementById('packListTitle').textContent = `Pack for ${nextDay}`;
+  document.getElementById('tomorrowPackList').innerHTML = getPackItemsForDay(nextDay, nextDateStr).map(item => renderPackItem(nextDay, item)).join('');
+  document.getElementById('fullTimetableGrid').innerHTML = TIMETABLE_DAYS.map(day => {
+    const dayClasses = (table[day] || []).filter(c => !['Lunch', 'Recess'].includes(c.subject));
+    return `<article class="timetable-day ${day === selected ? 'active' : ''}"><h3>${day}</h3>${dayClasses.map(c => `<p><strong>${v38Escape(c.time || '')}</strong> ${v38Escape(c.subject || '')}${c.venue ? ` · ${v38Escape(c.venue)}` : ''}</p>`).join('')}</article>`;
+  }).join('');
+};
+renderTimetableDashboard = function() {
+  const day = getSelectedCycleDay();
+  const todayStr = inputDateString(todayDate());
+  const dateForSelected = day === getAutoCycleDay() ? todayStr : '';
+  const classes = classesForDayWithDate(day, dateForSelected).filter(c => !['Lunch', 'Recess'].includes(c.subject));
+  const nextDate = nextSchoolDate(todayDate());
+  const nextDay = getAutoCycleDay(nextDate);
+  const nextDateStr = inputDateString(nextDate);
+  const preview = document.getElementById('dashboardTimetablePreview');
+  const pack = document.getElementById('dashboardPackPreview');
+  const badge = document.getElementById('tomorrowCycleBadge');
+  if (badge) badge.textContent = nextDay;
+  if (preview) preview.innerHTML = `<div class="cycle-chip">${day}</div>` + classes.slice(0, 6).map(classRow).join('') + (classes.length > 6 ? `<button class="text-btn" data-section="timetable">View ${classes.length - 6} more</button>` : '');
+  if (pack) pack.innerHTML = getPackItemsForDay(nextDay, nextDateStr).slice(0, 7).map(item => renderPackItem(nextDay, item)).join('');
+};
+const v39RenderAllOriginal = renderAll;
+renderAll = function() { v39RenderAllOriginal(); injectV39Panels(); };
+
+document.addEventListener('click', e => {
+  if (e.target.id === 'parseTimetableUploadBtn') handleParseUpload('timetable');
+  if (e.target.id === 'saveManualTimetableBtn') saveManualTimetableRow();
+  if (e.target.id === 'resetTimetableBtn') {
+    if (confirm('Reset this student to the original Evans timetable?')) { resetSchoolTimetable(); renderAll(); toast('Original timetable restored'); }
+  }
+});
+document.addEventListener('DOMContentLoaded', () => setTimeout(injectV39Panels, 150));
