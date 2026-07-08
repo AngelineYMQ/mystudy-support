@@ -1,55 +1,45 @@
-# EduStation Student HQ · Complete Local MVP
+# EduStation Student HQ v35 — Preserved Evans Interface + Client Login
 
-This zip is a complete multi-user, multi-student Student HQ web app for testing the commercial product flow.
-
-## What is included
-
-- Login page
-- Role-based access:
-  - Admin: view and manage all students/users
-  - Parent: view assigned child only
-  - Student: view own dashboard and mark tasks done
-  - Teacher / Consultant: view assigned students and update tasks/notes/exams/schedule
-- Admin student management
-- User creation and student assignment
-- Per-student dashboard
-- Per-student tasks, exams, schedule, subjects, notes and reports
-- Parent-ready weekly report generator
-- Print / Save as PDF support
-- Local data persistence using browser localStorage
-
-## Test accounts
-
-Admin:
-- admin@edustation.com.sg / admin123
-
-Consultant:
-- consultant@edustation.com.sg / consultant123
-
-Teacher:
-- teacher@nanyang.edu.sg / teacher123
-
-Parent:
-- parent.evans@example.com / parent123
-
-Student:
-- evans@example.com / student123
+This package keeps the original Evans Study HQ v34 interface, navigation, cards, timetable and study workflow, but adds a client-account layer for selling the product to multiple families.
 
 ## How to open
 
-Open `index.html` directly in a browser.
+Unzip the package and double-click `index.html`.
+
+## Test accounts
+
+- Admin: `admin@edustation.com.sg` / `admin123`
+- Evans Parent: `parent.evans@example.com` / `parent123`
+- Evans Student: `evans@student.local` / `student123`
+- Teacher: `teacher@edustation.com.sg` / `teacher123`
+
+## What changed from the original Evans ZIP
+
+- Preserved original UI, tabs and layout.
+- Added login page.
+- Added role-based access model.
+- Added Admin Console.
+- Added student switcher for Admin / Teacher.
+- Added multiple student spaces.
+- Added student-scoped storage: homework, check-ins, planner, notes and progress are separated per student.
+- Replaced visible student name in the header dynamically.
 
 ## Important production note
 
-This is a complete working local MVP, but it stores data in the browser with localStorage. That is fine for testing the product and sales flow, but not secure enough for real paying clients.
+This is still a front-end MVP. It is enough to test the product flow and show clients, but real paid customer use needs a server-side backend, encrypted authentication and a real database.
 
-Before selling to real families, connect it to a real backend such as:
+Recommended production stack:
 
-- Supabase Auth + Postgres
-- Firebase Auth + Firestore
-- Cloudflare Pages + D1 + Access/Auth
-- A custom Node/Next.js backend
+- Cloudflare Pages for frontend
+- Cloudflare Workers for API
+- Cloudflare D1 or Supabase/Postgres for database
+- Auth.js / Clerk / Supabase Auth for secure login
 
-## Suggested next production step
+## Files
 
-Replace the localStorage adapter in `app.js` with an API layer. Keep the UI and data model, but move users/students/tasks/exams/schedules/notes/reports into a database.
+- `index.html` — original interface + login/admin modals
+- `style.css` — original style + account layer CSS
+- `script.js` — original Evans Study HQ logic
+- `auth-guard.js` — storage scoping and auth seed data
+- `auth-ui.js` — login, logout, admin console and student switcher
+- `schema.sql` — original database schema reference

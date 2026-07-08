@@ -3,14 +3,597 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EduStation Student HQ</title>
+  <title>EduStation Student HQ · Client Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=35.0" />
 </head>
 <body>
-  <div id="app"></div>
-  <script src="app.js"></script>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark">E</div>
+        <div>
+          <h1>Evans Study HQ</h1>
+          <p id="todayLabel">Daily Study Dashboard</p>
+        </div>
+      </div>
+      <nav class="nav-tabs" aria-label="Main navigation">
+        <button class="nav-btn active" data-section="dashboard">Dashboard</button>
+        <button class="nav-btn" data-section="homework">Homework</button>
+        <button class="nav-btn" data-section="timetable">Schedule</button>
+        <button class="nav-btn" data-section="wa3">WA3 Board</button>
+        <button class="nav-btn" data-section="planner">Weekly Plan</button>
+        <button class="nav-btn" data-section="revision">Revision Lab</button>
+        <button class="nav-btn" data-section="progress">Progress</button>
+      </nav>
+      <div class="header-tools">
+        <div id="syncStatusPill" class="sync-pill" data-mode="neutral">Syncing…</div>
+        <div class="language-switch" aria-label="Language switch">
+          <button id="langEnBtn" class="lang-btn active" type="button">EN</button>
+          <button id="langZhBtn" class="lang-btn" type="button">中文</button>
+        </div>
+      </div>
+    </header>
+    <div id="accountBar" class="account-bar" hidden>
+      <div class="account-left">
+        <span class="account-chip" id="roleChip">Role</span>
+        <label class="student-switch-label" for="studentSwitcher">Student</label>
+        <select id="studentSwitcher" class="student-switcher"></select>
+        <span class="account-hint" id="accountHint">Data is separated by student account.</span>
+      </div>
+      <div class="account-actions">
+        <button id="manageAccountsBtn" class="text-btn" type="button">Admin Console</button>
+        <button id="logoutBtn" class="secondary-action" type="button">Log out</button>
+      </div>
+    </div>
+
+    <main>
+      <section id="dashboard" class="section active-section">
+        <div class="dashboard-hero compact-card">
+          <div>
+            <p class="eyebrow">Open this first</p>
+            <h2>Hi Evans 👋</h2>
+            <p class="muted">Check today’s mission, finish one task, then practise or review mistakes.</p>
+          </div>
+          <div class="hero-actions">
+            <button id="startMissionBtn" class="primary-action">Start Today’s Mission</button>
+            <div class="last-opened-pill" id="lastOpenedPill">Last opened: —</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid four-cols">
+          <article class="card top3-card">
+            <div class="card-heading-row">
+              <div>
+                <p class="eyebrow">Focus</p>
+                <h3>Today’s Top 3</h3>
+              </div>
+              <span class="mini-badge" id="focusCountBadge">0/3</span>
+            </div>
+            <div id="todayFocusList" class="task-list compact-list"></div>
+            <p class="helper-text">Tick one small task at a time. Progress is saved on this device.</p>
+          </article>
+
+          <article class="card deadline-card">
+            <div class="card-heading-row">
+              <div>
+                <p class="eyebrow">Deadline</p>
+                <h3>Next Deadline</h3>
+              </div>
+              <span class="urgency-badge" id="nextDeadlineUrgency">Soon</span>
+            </div>
+            <div id="nextDeadlineCard" class="deadline-content"></div>
+            <div class="time-bar"><span id="deadlineTimeBar"></span></div>
+          </article>
+
+          <article class="card progress-card">
+            <div class="card-heading-row">
+              <div>
+                <p class="eyebrow">WA3</p>
+                <h3>Progress</h3>
+              </div>
+              <span class="mini-badge" id="wa3PercentBadge">0%</span>
+            </div>
+            <div class="big-number" id="wa3ProgressText">0 / 12</div>
+            <div class="progress-bar"><span id="wa3ProgressBar"></span></div>
+            <p class="helper-text" id="wa3Encouragement">12 missions are already loaded. Start with the next deadline.</p>
+          </article>
+
+          <article class="card streak-card">
+            <div class="card-heading-row">
+              <div>
+                <p class="eyebrow">Daily habit</p>
+                <h3>Study Streak</h3>
+              </div>
+              <span class="mini-badge" id="streakStatusBadge">Ready</span>
+            </div>
+            <div class="streak-number"><span class="flame">🔥</span><strong id="streakCount">0</strong><span>days</span></div>
+            <p class="helper-text" id="streakHelper">Check in once a day after doing one real action.</p>
+            <button id="dailyCheckinBtn" class="secondary-action full-width">Check in today</button>
+            <div id="streakWeekDots" class="streak-dots" aria-label="Recent check-ins"></div>
+          </article>
+        </div>
+
+        <section class="card quick-start-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Quick Start</p>
+              <h3>What do you need now?</h3>
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="quick-card" data-section="homework"><strong>Homework</strong><span>Record daily homework and due dates</span></button>
+            <button class="quick-card" data-section="timetable"><strong>Schedule</strong><span>School, tuition and activities</span></button>
+            <button class="quick-card" data-section="wa3"><strong>WA3 Board</strong><span>Track tests, projects and submissions</span></button>
+            <button class="quick-card" data-section="planner"><strong>Weekly Plan</strong><span>Longer plans, activities and projects</span></button>
+            <button class="quick-card" data-section="revision"><strong>Revision Lab</strong><span>Practise questions and review mistakes</span></button>
+            <button class="quick-card" data-section="progress"><strong>Progress</strong><span>See what is improving</span></button>
+          </div>
+        </section>
+
+        <div class="dashboard-grid two-cols">
+          <section class="card homework-preview-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Daily Homework</p>
+                <h3>Homework Due Soon</h3>
+              </div>
+              <button class="text-btn" data-section="homework">Open homework</button>
+            </div>
+            <div id="dashboardHomeworkPreview" class="homework-preview"></div>
+            <button id="quickAddHomeworkBtn" class="secondary-action full-width">+ Add homework</button>
+          </section>
+
+          <section class="card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Next 5</p>
+                <h3>Upcoming Deadlines</h3>
+              </div>
+              <button class="text-btn" data-section="wa3">View all</button>
+            </div>
+            <div id="upcomingDeadlines" class="deadline-list"></div>
+          </section>
+        </div>
+
+        <div class="dashboard-grid two-cols">
+          <section class="card schedule-preview-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Today</p>
+                <h3>After-school Schedule</h3>
+              </div>
+              <button class="text-btn" data-section="timetable">Open schedule</button>
+            </div>
+            <div id="dashboardActivitiesPreview" class="activity-list compact"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Mum Check</p>
+                <h3>Proof & Activity</h3>
+              </div>
+            </div>
+            <div id="parentSummary" class="summary-grid"></div>
+            <div id="auditNudge" class="audit-nudge"></div>
+          </section>
+        </div>
+
+
+        <section class="card school-notices-preview-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">NCHS Updates</p>
+              <h3>School Notices for Evans</h3>
+            </div>
+            <button class="text-btn" data-section="timetable">View schedule</button>
+          </div>
+          <div id="dashboardSchoolNoticesPreview" class="notice-list compact"></div>
+          <p class="helper-text">Filtered from the Semester 2 parent letter. Sec 3/4-only items and unrelated achievements are not shown.</p>
+        </section>
+
+        <div class="dashboard-grid two-cols">
+          <section class="card timetable-preview-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">School day</p>
+                <h3>Today’s Classes</h3>
+              </div>
+              <button class="text-btn" data-section="timetable">Open timetable</button>
+            </div>
+            <div id="dashboardTimetablePreview" class="today-classes"></div>
+          </section>
+
+          <section class="card pack-preview-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Tomorrow</p>
+                <h3>Pack List</h3>
+              </div>
+              <span class="mini-badge" id="tomorrowCycleBadge">Next day</span>
+            </div>
+            <div id="dashboardPackPreview" class="pack-list compact"></div>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Timeline</p>
+              <h3>This Week Timeline</h3>
+            </div>
+            <button class="text-btn" data-section="planner">Edit week</button>
+          </div>
+          <div id="weekPreview" class="week-preview"></div>
+        </section>
+      </section>
+
+      <section id="homework" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Daily homework</p>
+            <h2>Homework Log</h2>
+            <p class="muted">Record homework after school. Due dates show as Today / Tomorrow plus the exact date.</p>
+          </div>
+          <button id="addHomeworkBtn" class="primary-action small">+ Add homework</button>
+        </div>
+        <div class="homework-toolbar card">
+          <div>
+            <p class="eyebrow">How to use</p>
+            <strong>After school: add every homework item. Before bed: check Due Tomorrow.</strong>
+          </div>
+          <button id="clearCompletedHomeworkBtn" class="text-btn">Clear completed</button>
+        </div>
+        <div id="homeworkBoard" class="homework-board"></div>
+      </section>
+
+      <section id="wa3" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">NCHS Sec 1 · Term 3</p>
+            <h2>WA3 Mission Board</h2>
+            <p class="muted">All WA3 tests, submissions and projects are preloaded. Add notes so nothing gets forgotten.</p>
+          </div>
+          <div class="header-stat">
+            <span id="wa3HeaderCompleted">0/12</span>
+            <small>completed</small>
+          </div>
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="test">Tests</button>
+          <button class="filter-btn" data-filter="submission">Submissions</button>
+          <button class="filter-btn" data-filter="project">Projects</button>
+          <button class="filter-btn" data-filter="presentation">Presentation</button>
+        </div>
+        <div id="wa3TaskList" class="wa3-list"></div>
+      </section>
+
+      <section id="planner" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Longer plan</p>
+            <h2>Weekly Plan</h2>
+            <p class="muted">Use this for longer plans: project work, tuition prep, taekwondo, CCA, exam prep and family reminders.</p>
+          </div>
+          <button id="addPlannerTaskBtn" class="primary-action small">+ Add plan</button>
+        </div>
+        <div id="plannerGrid" class="planner-grid"></div>
+      </section>
+
+
+      <section id="timetable" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">School + after-school</p>
+            <h2>Schedule</h2>
+            <p class="muted">School uses a 10-day cycle. Add tuition, taekwondo, CCA and important activities here too.</p>
+          </div>
+          <div class="timetable-selector">
+            <label for="cycleDaySelect">Today is</label>
+            <select id="cycleDaySelect"></select>
+            <button id="autoCycleBtn" class="text-btn" type="button">Use auto</button>
+            <small id="cycleInfo" class="cycle-info">Auto cycle is on.</small>
+          </div>
+        </div>
+
+        <div class="dashboard-grid two-cols">
+          <section class="card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Selected day</p>
+                <h3 id="selectedCycleTitle">Today’s Classes</h3>
+              </div>
+              <span class="mini-badge" id="selectedClassCount">0 classes</span>
+            </div>
+            <div id="selectedDayClasses" class="class-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Bag check</p>
+                <h3 id="packListTitle">Pack for Tomorrow</h3>
+              </div>
+            </div>
+            <div id="tomorrowPackList" class="pack-list"></div>
+            <p class="helper-text">This is generated from tomorrow’s timetable. Add extra teacher instructions in Weekly Planner if needed.</p>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">After school</p>
+              <h3>Tuition, CCA & Activities</h3>
+            </div>
+            <button id="addActivityBtn" class="primary-action small">+ Add activity</button>
+          </div>
+          <div id="activityList" class="activity-list"></div>
+        </section>
+
+        <section class="card school-notices-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">NCHS Semester 2</p>
+              <h3>School Notices & Important Dates</h3>
+            </div>
+          </div>
+          <div id="schoolNoticeList" class="notice-list"></div>
+          <p class="helper-text">Only items relevant to Evans / Sec 1 / 1 Excellence are included.</p>
+        </section>
+
+        <section class="card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">10-day cycle</p>
+              <h3>School Timetable</h3>
+            </div>
+          </div>
+          <div id="fullTimetableGrid" class="timetable-grid"></div>
+        </section>
+      </section>
+
+      <section id="revision" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Practice</p>
+            <h2>Revision Lab</h2>
+            <p class="muted">Choose a subject and topic. Wrong answers go into the Mistake Book.</p>
+          </div>
+          <div class="header-stat">
+            <span id="lastScoreLabel">—</span>
+            <small>last score</small>
+          </div>
+        </div>
+
+        <div class="revision-layout">
+          <aside class="card revision-controls">
+            <label>Subject</label>
+            <select id="subjectSelect"></select>
+            <label>Topic</label>
+            <select id="topicSelect"></select>
+            <label>Number of questions</label>
+            <select id="questionCountSelect">
+              <option value="5">5 questions</option>
+              <option value="10">10 questions</option>
+            </select>
+            <button id="startPracticeBtn" class="primary-action full-width">Start Practice Round</button>
+            <div class="practice-history-mini" id="practiceHistoryMini"></div>
+          </aside>
+
+          <div class="card question-card">
+            <div id="questionArea" class="empty-state">
+              <h3>Ready for a short round?</h3>
+              <p>Pick a subject and topic, then start. Keep rounds short so it feels doable.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="revision-mistake-panel">
+          <div class="page-header compact-page-header">
+            <div>
+              <p class="eyebrow">Review loop</p>
+              <h2>Mistake Book</h2>
+              <p class="muted">Wrong answers from Revision Lab appear here. A mistake is mastered after Evans answers it correctly twice.</p>
+            </div>
+            <div class="header-stat">
+              <span id="streakLabel">🔥 0</span>
+              <small>review streak</small>
+            </div>
+          </div>
+          <div class="mistake-grid-in-revision">
+            <div class="card">
+              <div class="section-title-row">
+                <h3>Active Mistakes</h3>
+                <button id="startMistakeReviewBtn" class="secondary-action">Start Review</button>
+              </div>
+              <div id="mistakeList" class="mistake-list"></div>
+            </div>
+            <div class="card mastered-card">
+              <div class="section-title-row">
+                <h3>Mastered</h3>
+                <span class="mini-badge" id="masteredCountLabel">0</span>
+              </div>
+              <div id="masteredList" class="mastered-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="progress" class="section">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Evidence</p>
+            <h2>Progress Dashboard</h2>
+            <p class="muted">This grows when Evans completes tasks, practises and reviews mistakes.</p>
+          </div>
+        </div>
+        <div id="progressDashboard" class="progress-dashboard"></div>
+        <div class="card audit-log-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Audit trail</p>
+              <h3>Recent Task Evidence</h3>
+            </div>
+          </div>
+          <div id="auditLogList" class="audit-log-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="taskModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title-row">
+        <h3>Add a Weekly Plan</h3>
+        <button id="closeTaskModal" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <label>Day</label>
+      <select id="modalDaySelect"></select>
+      <label>Task</label>
+      <input id="modalTaskInput" type="text" placeholder="e.g. Taekwondo grading practice / work on Science IPW" />
+      <label>Type</label>
+      <select id="modalTaskType">
+        <option value="Study">Study</option>
+        <option value="Project">Project</option>
+        <option value="Tuition">Tuition</option>
+        <option value="CCA">CCA</option>
+        <option value="Taekwondo">Taekwondo</option>
+        <option value="Exam">Exam</option>
+        <option value="Family">Family</option>
+        <option value="Reminder">Reminder</option>
+      </select>
+      <button id="savePlannerTaskBtn" class="primary-action full-width">Save plan</button>
+    </div>
+  </div>
+
+  <div id="homeworkModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title-row">
+        <h3>Add Homework</h3>
+        <button id="closeHomeworkModal" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <label>Subject</label>
+      <select id="homeworkSubjectInput">
+        <option>Mathematics</option>
+        <option>English</option>
+        <option>Higher Chinese</option>
+        <option>Science</option>
+        <option>History</option>
+        <option>Geography</option>
+        <option>Literature</option>
+        <option>FCE</option>
+        <option>Art</option>
+        <option>MSP</option>
+        <option>Other</option>
+      </select>
+      <label>Homework details</label>
+      <input id="homeworkTextInput" type="text" placeholder="e.g. Worksheet 5B Q1-Q10" />
+      <label>Due date</label>
+      <input id="homeworkDueInput" type="date" />
+      <button id="saveHomeworkBtn" class="primary-action full-width">Save homework</button>
+    </div>
+  </div>
+
+  <div id="activityModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title-row">
+        <h3>Add Schedule Item</h3>
+        <button id="closeActivityModal" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <label>Type</label>
+      <select id="activityTypeInput">
+        <option>Tuition</option>
+        <option>Taekwondo</option>
+        <option>CCA</option>
+        <option>Exam</option>
+        <option>Family</option>
+        <option>Reminder</option>
+      </select>
+      <label>Title</label>
+      <input id="activityTitleInput" type="text" placeholder="e.g. NANYANG Math tuition" />
+      <label>Date</label>
+      <input id="activityDateInput" type="date" />
+      <label>Time</label>
+      <input id="activityTimeInput" type="time" />
+      <label>Notes</label>
+      <input id="activityNotesInput" type="text" placeholder="e.g. Bring worksheet file" />
+      <button id="saveActivityBtn" class="primary-action full-width">Save schedule item</button>
+    </div>
+  </div>
+
+
+  <div id="loginOverlay" class="login-overlay" aria-modal="true" role="dialog">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">E</div>
+        <div>
+          <h2>EduStation Student HQ</h2>
+          <p>Secure client access · Study dashboard</p>
+        </div>
+      </div>
+      <label>Email</label>
+      <input id="loginEmail" type="email" autocomplete="username" placeholder="admin@edustation.com.sg" />
+      <label>Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
+      <button id="loginBtn" class="primary-action full-width" type="button">Log in</button>
+      <p id="loginError" class="login-error"></p>
+      <div class="demo-logins">
+        <strong>Built-in test accounts</strong>
+        <button type="button" data-fill-login="admin@edustation.com.sg|admin123">Admin</button>
+        <button type="button" data-fill-login="parent.evans@example.com|parent123">Evans Parent</button>
+        <button type="button" data-fill-login="evans@student.local|student123">Evans Student</button>
+        <button type="button" data-fill-login="teacher@edustation.com.sg|teacher123">Teacher</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminConsole" class="admin-console" aria-hidden="true">
+    <div class="admin-card">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">EduStation Admin</p>
+          <h3>Client Accounts</h3>
+        </div>
+        <button id="closeAdminConsole" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <div class="admin-grid">
+        <section>
+          <h4>Add Student</h4>
+          <input id="newStudentName" placeholder="Student name" />
+          <input id="newStudentSchool" placeholder="School / Programme" />
+          <input id="newStudentGrade" placeholder="Grade / Level" />
+          <input id="newStudentTarget" placeholder="Target exam / goal" />
+          <button id="addStudentBtn" class="primary-action full-width" type="button">Create student space</button>
+        </section>
+        <section>
+          <h4>Add User</h4>
+          <input id="newUserName" placeholder="User name" />
+          <input id="newUserEmail" placeholder="Email" />
+          <input id="newUserPassword" placeholder="Temporary password" />
+          <select id="newUserRole">
+            <option value="parent">Parent</option>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="consultant">Consultant</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select id="newUserStudent"></select>
+          <button id="addUserBtn" class="primary-action full-width" type="button">Create user</button>
+        </section>
+      </div>
+      <div id="adminLists" class="admin-lists"></div>
+      <p class="helper-text">This version preserves the original Evans Study HQ interface. Each student has separate saved homework, check-ins, notes, plans and progress through student-scoped storage.</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="auth-guard.js?v=35.0"></script>
+  <script src="script.js?v=35.0"></script>
+  <script src="auth-ui.js?v=35.0"></script>
 </body>
 </html>
